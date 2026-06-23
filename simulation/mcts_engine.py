@@ -9,6 +9,7 @@ SCENARIO_BASELINE = {
         "run_rate": "96%",
         "run_rate_delta": "+0%",
         "base_nodes": [1, 2, 3],
+        "disrupted_nodes": [],
     },
     "Red Sea Shipping Suspension (Houthi Threat)": {
         "brent_spike": "$88.50/bbl",
@@ -18,6 +19,7 @@ SCENARIO_BASELINE = {
         "run_rate": "82%",
         "run_rate_delta": "-12%",
         "base_nodes": [2, 4, 5],
+        "disrupted_nodes": [6],
     },
     "Strait of Hormuz Partial Closure": {
         "brent_spike": "$92.20/bbl",
@@ -26,7 +28,8 @@ SCENARIO_BASELINE = {
         "spr_delta": "-3.6 Days",
         "run_rate": "78%",
         "run_rate_delta": "-15%",
-        "base_nodes": [3, 5, 6],
+        "base_nodes": [1, 2],
+        "disrupted_nodes": [3],
     },
     "OPEC+ Emergency Supply Cut": {
         "brent_spike": "$95.30/bbl",
@@ -36,6 +39,7 @@ SCENARIO_BASELINE = {
         "run_rate": "73%",
         "run_rate_delta": "-19%",
         "base_nodes": [4, 6, 7],
+        "disrupted_nodes": [],
     },
 }
 
