@@ -1,0 +1,51 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "US Gulf Coast",
+      "type": "refinery",
+      "capacity_mmbpd": 9.3
+    },
+    {
+      "id": 2,
+      "name": "West Africa",
+      "type": "port",
+      "capacity_mmbpd": 5.1
+    },
+    {
+      "id": 3,
+      "name": "Middle East Hub",
+      "type": "hub",
+      "capacity_mmbpd": 15.0
+    },
+    {
+      "id": 4,
+      "name": "Jamnagar",
+      "type": "refinery",
+      "capacity_mmbpd": 2.3
+    },
+    {
+      "id": 5,
+      "name": "Cape of Good Hope",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0
+    }
+  ],
+  "edges": [
+    {
+      "source": 2,
+      "target": 5,
+      "type": "sea_lane"
+    },
+    {
+      "source": 5,
+      "target": 4,
+      "type": "sea_lane"
+    },
+    {
+      "source": 1,
+      "target": 3,
+      "type": "pipeline"
+    }
+  ]
+}
