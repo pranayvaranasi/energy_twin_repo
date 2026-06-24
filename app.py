@@ -1,6 +1,8 @@
 import streamlit as st
+import time
 from simulation.mcts_engine import run_mcts_scenario
 from routing.wrapper import get_optimized_corridors
+from simulation.watcher_agent import ingest_and_classify_news
 
 st.set_page_config(page_title="Supply Chain Digital Twin", layout="wide")
 
@@ -9,19 +11,41 @@ st.markdown("Dynamic MCTS scenario modelling & adaptive procurement routing.")
 
 # --- SIDEBAR: DISRUPTION MODELLER ---
 st.sidebar.header("Geopolitical Risk Modeller")
-st.sidebar.markdown("Inject a disruption signal to test supply chain resilience.")
+st.sidebar.markdown("Inject a disruption signal manually, or let the NLP Watcher scan live feeds.")
 
-disruption_event = st.sidebar.selectbox(
-    "Select Event Trigger:",
-    [
-        "Baseline (No Disruption)",
-        "Red Sea Shipping Suspension (Houthi Threat)",
-        "Strait of Hormuz Partial Closure",
-        "OPEC+ Emergency Supply Cut",
-    ],
-)
+# Track if autonomous mode was triggered
+autonomous_triggered = False
+disruption_event = None
+severity = None
 
-severity = st.sidebar.slider("Disruption Severity Factor", 1, 10, 5)
+# NEW: Autonomous AI Mode
+st.sidebar.subheader("📡 Autonomous Mode")
+if st.sidebar.button("Fetch Live Intelligence Signal"):
+    autonomous_triggered = True
+    with st.spinner("NLP Agent scanning global news feeds..."):
+        time.sleep(1)  # Simulate API latency
+        signal_data = ingest_and_classify_news()
+        
+        st.sidebar.warning(f"**Latest Intel:** {signal_data['headline']}")
+        st.sidebar.info(f"**AI Classification:** {signal_data['trigger_event']}\n\n**Severity:** {signal_data['calculated_severity']}/10")
+        
+        # Override manual settings with AI detected settings
+        disruption_event = signal_data['trigger_event']
+        severity = signal_data['calculated_severity']
+
+if not autonomous_triggered:
+    # Existing Manual Mode
+    st.sidebar.subheader("⚙️ Manual Mode")
+    disruption_event = st.sidebar.selectbox(
+        "Select Event Trigger:",
+        [
+            "Baseline (No Disruption)",
+            "Red Sea Shipping Suspension (Houthi Threat)",
+            "Strait of Hormuz Partial Closure",
+            "OPEC+ Emergency Supply Cut",
+        ],
+    )
+    severity = st.sidebar.slider("Disruption Severity Factor", 1, 10, 5)
 
 if st.sidebar.button("Simulate & Optimize", type="primary"):
     with st.spinner("Running MCTS to predict cascading economic impacts..."):
