@@ -70,7 +70,10 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         )
 
     with st.spinner("Executing C++ graph traversal for alternative corridors..."):
+        start_time = time.perf_counter()
         routes = get_optimized_corridors(impact_data)
+        end_time = time.perf_counter()
+        calc_time_ms = (end_time - start_time) * 1000
 
     st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
     st.divider()
@@ -100,6 +103,7 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     st.divider()
     st.subheader("Adaptive Procurement Orchestrator")
     st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones.")
+    st.caption(f"⚡ Corridors optimized in **{calc_time_ms:.3f} ms** using C++ Dijkstra's algorithm running at $O(E + V \\log V)$ complexity.")
 
     with st.container():
         live_map_fig = generate_geospatial_twin(impact_data, routes)

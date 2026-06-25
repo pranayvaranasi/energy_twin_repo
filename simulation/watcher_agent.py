@@ -1,5 +1,6 @@
 import random
 import time
+import json
 
 # Mock live news stream. In production, this connects to a News API or GDELT.
 MOCK_LIVE_FEED = [
@@ -20,36 +21,41 @@ EVENT_MAPPING = {
 
 def ingest_and_classify_news(headlines=None):
     """
-    Ingests text feeds, extracts geopolitical entities, and calculates a severity score 
-    to trigger the supply chain digital twin.
+    Simulates passing unstructured news data to an LLM to extract
+    geopolitical entities and risk severity in strict JSON format.
     """
     if not headlines:
-        # Simulate fetching the latest breaking news
         headlines = [random.choice(MOCK_LIVE_FEED)]
         
     latest_news = headlines[0]
+
+    extraction_prompt = f"""
+    You are a Geopolitical Risk Intelligence AI. Analyze the following maritime/energy news feed:
+    \"{latest_news}\"
+    
+    Extract the intelligence into the following strict JSON schema:
+    {{
+        "trigger_event": "String (Must be one of: 'Red Sea Shipping Suspension (Houthi Threat)', 'Strait of Hormuz Partial Closure', 'OPEC+ Emergency Supply Cut', 'Baseline (No Disruption)')",
+        "calculated_severity": "Integer (1-10 based on economic threat level)"
+    }}
+    """
+
+    # In a live environment, you would call:
+    # response = gemini_model.generate_content(extraction_prompt)
+    # extracted_data = json.loads(response.text)
+    # Here we mock the parsed LLM output for the prototype.
+
     news_lower = latest_news.lower()
-    
-    detected_event = "Baseline (No Disruption)"
-    severity = 1
-    
-    # 1. Entity Extraction & Event Mapping
-    for keyword, mapped_event in EVENT_MAPPING.items():
-        if keyword in news_lower:
-            detected_event = mapped_event
-            
-            # 2. Simple Sentiment/Severity Scoring
-            # If the news contains aggressive or urgent keywords, spike the severity
-            high_risk_words = ["attack", "military", "emergency", "block", "cut"]
-            if any(word in news_lower for word in high_risk_words):
-                severity = random.randint(7, 10)
-            else:
-                severity = random.randint(4, 6)
-            break
-            
+    if "houthi" in news_lower or "red sea" in news_lower:
+        extracted_data = {"trigger_event": "Red Sea Shipping Suspension (Houthi Threat)", "calculated_severity": random.randint(8, 10)}
+    elif "opec" in news_lower:
+        extracted_data = {"trigger_event": "OPEC+ Emergency Supply Cut", "calculated_severity": random.randint(6, 8)}
+    else:
+        extracted_data = {"trigger_event": "Baseline (No Disruption)", "calculated_severity": 1}
+
     return {
         "headline": latest_news,
-        "trigger_event": detected_event,
-        "calculated_severity": severity,
+        "trigger_event": extracted_data["trigger_event"],
+        "calculated_severity": extracted_data["calculated_severity"],
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
