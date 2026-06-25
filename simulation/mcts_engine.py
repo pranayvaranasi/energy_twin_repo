@@ -9,13 +9,25 @@ SCENARIO_BASELINE = {
 }
 
 
-def run_mcts_scenario(disruption_event: str, severity: int) -> dict:
+def run_mcts_scenario(
+    disruption_event: str,
+    severity: int,
+    elasticity: float = -0.4,
+    spr_release_cap: float = 1.5,
+    refinery_buffer: int = 7,
+) -> dict:
     """Simulate cascading impacts using the PyTorch TFT Model."""
     if disruption_event not in SCENARIO_BASELINE:
         disruption_event = "Baseline (No Disruption)"
 
     scenario_nodes = SCENARIO_BASELINE[disruption_event].copy()
-    economic_forecast = predict_economic_fallout(disruption_event, severity)
+    economic_forecast = predict_economic_fallout(
+        disruption_event,
+        severity,
+        elasticity,
+        spr_release_cap,
+        refinery_buffer,
+    )
 
     final_impact_data = {**scenario_nodes, **economic_forecast}
     return final_impact_data

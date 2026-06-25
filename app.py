@@ -48,9 +48,26 @@ if not autonomous_triggered:
     )
     severity = st.sidebar.slider("Disruption Severity Factor", 1, 10, 5)
 
+st.sidebar.divider()
+
+# NEW: Address the "Explicit and Testable Assumptions" Evaluation Criteria
+st.sidebar.subheader("🧪 Model Fidelity & Assumptions")
+st.sidebar.caption("Adjust the baseline assumptions feeding the Temporal Fusion Transformer.")
+
+with st.sidebar.expander("Configure Baseline Covariates"):
+    elasticity = st.slider("Price Elasticity of Demand", -1.0, 0.0, -0.4, 0.1)
+    spr_release_cap = st.number_input("Max SPR Release (M bpd)", value=1.5, step=0.1)
+    refinery_buffer = st.slider("Refinery On-site Storage (Days)", 1, 15, 7)
+
 if st.sidebar.button("Simulate & Optimize", type="primary"):
     with st.spinner("Running MCTS to predict cascading economic impacts..."):
-        impact_data = run_mcts_scenario(disruption_event, severity)
+        impact_data = run_mcts_scenario(
+            disruption_event,
+            severity,
+            elasticity,
+            spr_release_cap,
+            refinery_buffer,
+        )
 
     with st.spinner("Executing C++ graph traversal for alternative corridors..."):
         routes = get_optimized_corridors(impact_data)

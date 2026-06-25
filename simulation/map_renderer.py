@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import plotly.graph_objects as go
 
 
@@ -74,6 +75,33 @@ def generate_geospatial_twin(impact_data, active_routes):
                     hoverinfo="skip",
                 )
             )
+
+    # NEW: Add simulated AIS Vessel Tracking points along active corridors
+    ais_lats, ais_lons, ais_text = [], [], []
+    for src_id, tgt_id in route_edges:
+        if src_id in node_dict and tgt_id in node_dict:
+            src = node_dict[src_id]
+            tgt = node_dict[tgt_id]
+            for fraction in np.linspace(0.1, 0.9, 5):
+                ais_lats.append(
+                    src["lat"] + (tgt["lat"] - src["lat"]) * fraction + np.random.normal(0, 0.5)
+                )
+                ais_lons.append(
+                    src["lon"] + (tgt["lon"] - src["lon"]) * fraction + np.random.normal(0, 0.5)
+                )
+                ais_text.append("Live AIS Telemetry (Simulated)")
+
+    if ais_lats:
+        fig.add_trace(
+            go.Scattergeo(
+                lon=ais_lons,
+                lat=ais_lats,
+                mode="markers",
+                marker=dict(size=4, color="gold", opacity=0.8, symbol="triangle-up"),
+                hoverinfo="text",
+                hovertext=ais_text,
+            )
+        )
 
     # Plot nodes (red if disrupted, green if active, blue otherwise)
     lats, lons, texts, colors, sizes = [], [], [], [], []

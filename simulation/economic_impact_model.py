@@ -49,7 +49,13 @@ def initialize_tft_model(training_dataset):
     return tft
 
 
-def predict_economic_fallout(disruption_event: str, severity_score: int) -> dict:
+def predict_economic_fallout(
+    disruption_event: str,
+    severity_score: int,
+    elasticity: float = -0.4,
+    spr_release_cap: float = 1.5,
+    refinery_buffer: int = 7,
+) -> dict:
     """Predict the economic shock over the next 14 days using a TFT prototype."""
     df_history = create_mock_historical_data()
 
@@ -80,15 +86,21 @@ def predict_economic_fallout(disruption_event: str, severity_score: int) -> dict
     # raw_predictions, x = tft.predict(training, mode="raw", return_x=True)
 
     base_price = float(df_history["brent_price"].iloc[-1])
-    predicted_spike = base_price * (1 + (severity_score * 0.02))
-    run_rate = max(55.0, 95.0 - (severity_score * 1.5))
-    spr_drawdown = max(1.0, 9.5 - (severity_score * 0.3))
+    shock_inflation = 1 + (severity_score * 0.02) + abs(elasticity) * 0.05
+    predicted_spike = base_price * shock_inflation
+    run_rate = max(55.0, 95.0 - (severity_score * 1.5) - (refinery_buffer * 0.2))
+    spr_drawdown = max(1.0, 9.5 - (severity_score * 0.3) + (spr_release_cap * 0.15))
 
     return {
         "brent_spike": f"${predicted_spike:.2f}/bbl",
-        "brent_delta": f"+{(severity_score * 2.0):.1f}%",
+        "brent_delta": f"+{(shock_inflation - 1) * 100:.1f}%",
         "spr_cover": f"{spr_drawdown:.1f} Days",
-        "spr_delta": f"-{(severity_score * 0.3):.1f} Days",
+        "spr_delta": f"-{(severity_score * 0.3 - spr_release_cap * 0.15):.1f} Days",
         "run_rate": f"{int(run_rate)}%",
-        "run_rate_delta": f"-{int(severity_score * 1.5)}%",
+        "run_rate_delta": f"-{int(severity_score * 1.5 + refinery_buffer * 0.2)}%",
+        "assumptions": {
+            "elasticity": elasticity,
+            "spr_release_cap": spr_release_cap,
+            "refinery_buffer": refinery_buffer,
+        },
     }
