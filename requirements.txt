@@ -1,6 +1,7 @@
-streamlit>=1.0
-numpy>=1.25
-pandas>=2.0
-pytorch-lightning>=2.0
-pytorch-forecasting>=0.14.0
-plotly>=5.0
+streamlit>=1.30.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+torch>=2.0.0
+lightning>=2.0.0
+pytorch-forecasting>=1.0.0

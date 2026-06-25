@@ -3,6 +3,15 @@ from pathlib import Path
 
 import numpy as np
 import plotly.graph_objects as go
+import streamlit as st
+
+
+# Cache the disk I/O operation so it only runs once per session
+@st.cache_data
+def load_graph_data():
+    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
+    with open(data_path, "r") as f:
+        return json.load(f)
 
 
 def _resolve_route_edges(active_routes, node_dict):
@@ -28,9 +37,7 @@ def _resolve_route_edges(active_routes, node_dict):
 
 def generate_geospatial_twin(impact_data, active_routes):
     """Generates an interactive Plotly map of the global supply chain."""
-    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
-    with open(data_path, "r") as f:
-        graph_data = json.load(f)
+    graph_data = load_graph_data()
 
     node_dict = {node["id"]: node for node in graph_data["nodes"]}
     disrupted_ids = set(impact_data.get("disrupted_nodes", []))
