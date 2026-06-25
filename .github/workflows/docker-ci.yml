@@ -1,0 +1,47 @@
+name: Docker Build & Smoke Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for multi-arch compat)
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t energy_twin_image:ci .
+
+      - name: Run container
+        run: |
+          docker run -d --name energy_twin_test energy_twin_image:ci sleep infinity
+
+      - name: Wait for container
+        run: sleep 3
+
+      - name: Verify C++ shared library exists
+        run: docker exec energy_twin_test ls -l /app/routing/graph_optimizer.so
+
+      - name: Run Python wrapper smoke test
+        run: |
+          docker exec energy_twin_test python -c "import routing.wrapper as w; assert w.router_lib, 'router_lib missing'; print('ROUTER_OK')"
+
+      - name: Optional Streamlit import check
+        run: docker exec energy_twin_test python -c "import streamlit; print('STREAMLIT_OK')" || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f energy_twin_test || true
+          docker image rm energy_twin_image:ci || true

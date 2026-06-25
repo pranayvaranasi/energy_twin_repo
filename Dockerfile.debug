@@ -1,0 +1,14 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install build tools only (fast smoke-test, no heavy Python packages)
+RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+
+# Copy source and compile C++ engine
+COPY routing/ ./routing/
+RUN if [ -f routing/graph_optimizer.cpp ]; then \
+      g++ -O3 -shared -fPIC -o routing/graph_optimizer.so routing/graph_optimizer.cpp; \
+    fi
+
+CMD ["/bin/bash", "-lc", "ls -l routing/graph_optimizer.so || true; python -c \"import routing.wrapper as w; print('LOADED' if w.router_lib else 'NO_LIB')\""]
