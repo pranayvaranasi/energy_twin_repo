@@ -3,6 +3,7 @@ import time
 import pandas as pd
 from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
+from simulation.spr_agent import generate_spr_schedule
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
 
@@ -126,6 +127,23 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         f_col2.metric("Optimized Reroute Cost", financials.get("optimized_cost"))
         f_col3.metric("AI-Driven Capital Savings", financials.get("ai_savings"), delta="Cost Avoided", delta_color="normal")
         st.divider()
+
+        st.subheader("Strategic Reserve Optimisation Agent")
+        st.markdown("Recommended daily SPR drawdown schedule to bridge the calculated supply gap.")
+
+        delay_str = routes[0].get("Est. Delay", "+0 Days")
+        delay_days = int("".join(filter(str.isdigit, delay_str))) if any(c.isdigit() for c in delay_str) else 14
+        spr_df = generate_spr_schedule(severity, delay_days, spr_release_cap)
+
+        if spr_df is not None:
+            st.area_chart(spr_df.set_index("Day")["Recommended SPR Release (M bpd)"], color="#FF4B4B")
+            with st.expander("View Detailed Drawdown Policy"):
+                st.dataframe(spr_df, use_container_width=True)
+        else:
+            st.success("No SPR drawdown required. Supply chain is stable.")
+
+        st.divider()
+
     with st.container():
         live_map_fig = generate_geospatial_twin(impact_data, routes)
         st.plotly_chart(live_map_fig, use_container_width=True)

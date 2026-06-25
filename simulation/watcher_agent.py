@@ -29,13 +29,26 @@ def ingest_and_classify_news(headlines=None):
         
     latest_news = headlines[0]
 
+    # NEW: Mocking the Retrieval step of RAG
+    # In production, this queries a vector database containing historical OSINT data.
+    mock_retrieved_context = """
+    Document 1 (OPEC+ Policy): OPEC+ has historically used 1.5M - 2M bpd quota cuts to stabilize prices during demand shocks.
+    Document 2 (Maritime Security): Houthi threats in the Red Sea typically disrupt 12-15% of global maritime chokepoint traffic, severely impacting Suez transit.
+    """
+
     extraction_prompt = f"""
-    You are a Geopolitical Risk Intelligence AI. Analyze the following maritime/energy news feed:
+    You are a Geopolitical Risk Intelligence AI utilizing Retrieval-Augmented Generation (RAG).
+
+    RETRIEVED CONTEXT:
+    {mock_retrieved_context}
+
+    LIVE NEWS FEED:
     \"{latest_news}\"
-    
+
+    Task: Synthesize the live news with the retrieved historical context.
     Extract the intelligence into the following strict JSON schema:
     {{
-        "trigger_event": "String (Must be one of: 'Red Sea Shipping Suspension (Houthi Threat)', 'Strait of Hormuz Partial Closure', 'OPEC+ Emergency Supply Cut', 'Baseline (No Disruption)')",
+        "trigger_event": "String",
         "calculated_severity": "Integer (1-10 based on economic threat level)"
     }}
     """
