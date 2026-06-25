@@ -1,2 +1,5 @@
 streamlit>=1.0
 numpy>=1.25
+pandas>=2.0
+pytorch-lightning>=2.0
+pytorch-forecasting>=0.14.0
