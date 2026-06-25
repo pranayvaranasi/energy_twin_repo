@@ -3,6 +3,7 @@ import time
 import pandas as pd
 from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
+from simulation.pdm_agent import calculate_pdm_risk
 from simulation.spr_agent import generate_spr_schedule
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
@@ -114,6 +115,26 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         value=impact_data["gdp_impact"],
         delta=impact_data["gdp_delta"],
     )
+
+    st.divider()
+
+    # Predictive Maintenance (PdM) Layer
+    st.subheader("Infrastructure Health & Predictive Maintenance (PdM)")
+    st.markdown("Real-time asset degradation forecasting based on rerouted capacity loads.")
+    pdm_assessment = calculate_pdm_risk(impact_data["run_rate"], impact_data["power_stress"])
+
+    with st.container(border=True):
+        pdm_col1, pdm_col2 = st.columns([1, 2])
+        with pdm_col1:
+            st.metric(
+                label=f"Asset: {pdm_assessment['asset']}",
+                value=pdm_assessment['failure_probability'],
+                delta="Failure Probability",
+                delta_color="inverse",
+            )
+        with pdm_col2:
+            st.markdown(f"**System Status:** {pdm_assessment['status']}")
+            st.markdown(f"**AI Recommendation:** {pdm_assessment['recommendation']}")
 
     st.divider()
     st.subheader("Adaptive Procurement Orchestrator")
