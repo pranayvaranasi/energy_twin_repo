@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import pandas as pd
 from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
 from routing.wrapper import get_optimized_corridors
@@ -71,9 +72,11 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
 
     with st.spinner("Executing C++ graph traversal for alternative corridors..."):
         start_time = time.perf_counter()
-        routes = get_optimized_corridors(impact_data)
+        routes_result = get_optimized_corridors(impact_data)
         end_time = time.perf_counter()
         calc_time_ms = (end_time - start_time) * 1000
+        routes = routes_result.get("routes", [])
+        financials = routes_result.get("financials", {})
 
     st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
     st.divider()
@@ -104,11 +107,29 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     st.subheader("Adaptive Procurement Orchestrator")
     st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones.")
     st.caption(f"⚡ Corridors optimized in **{calc_time_ms:.3f} ms** using C++ Dijkstra's algorithm running at $O(E + V \\log V)$ complexity.")
-
+    # Financial Impact Assessment (Executive-facing)
+    if financials:
+        st.subheader("Financial Impact Assessment")
+        f_col1, f_col2, f_col3 = st.columns(3)
+        f_col1.metric("Cost of Inaction (Naive Reroute)", financials.get("naive_cost"))
+        f_col2.metric("Optimized Reroute Cost", financials.get("optimized_cost"))
+        f_col3.metric("AI-Driven Capital Savings", financials.get("ai_savings"), delta="Cost Avoided", delta_color="normal")
+        st.divider()
     with st.container():
         live_map_fig = generate_geospatial_twin(impact_data, routes)
         st.plotly_chart(live_map_fig, use_container_width=True)
 
     st.dataframe(routes, use_container_width=True)
+
+    # Exportable report for executives
+    df_export = pd.DataFrame(routes)
+    csv = df_export.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Download Procurement Strategy Report (CSV)",
+        data=csv,
+        file_name='adaptive_procurement_strategy.csv',
+        mime='text/csv',
+        type="secondary"
+    )
 else:
     st.info("👈 Awaiting disruption trigger from the control panel.")

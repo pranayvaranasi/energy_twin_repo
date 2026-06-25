@@ -28,17 +28,37 @@ def get_optimized_corridors(impact_data):
     else:
         score = sum(node_ids) * 2.5
 
+    # Financial ROI calculation (all values in Millions USD)
+    cost_per_day_delay = 1.5  # $1.5M per day of delay
+    naive_delay_days = 21  # worst-case naive reroute delay
+
+    optimized_delay_days = int(score) if score != -1.0 else 0
+    naive_cost_mm = naive_delay_days * cost_per_day_delay
+    optimized_cost_mm = optimized_delay_days * cost_per_day_delay
+    ai_savings_mm = naive_cost_mm - optimized_cost_mm
+
     # If the C++ engine determines all external routes are blocked (-1.0)
     if score == -1.0:
-        return [{
-            "Rank": 1, "Source": "Strategic Reserves (SPR)", 
-            "Corridor": "Domestic Pipeline Release", 
-            "Est. Delay": "0 Days", "Cost Premium": "None", 
-            "Routing Score": "EMERGENCY DRAWDOWN"
-        }]
+        routes = [
+            {
+                "Rank": 1,
+                "Source": "Strategic Reserves (SPR)",
+                "Corridor": "Domestic Pipeline Release",
+                "Est. Delay": "0 Days",
+                "Cost Premium": "None",
+                "Routing Score": "EMERGENCY DRAWDOWN",
+            }
+        ]
+    else:
+        routes = [
+            {"Rank": 1, "Source": "West Africa (Spot)", "Corridor": "Cape of Good Hope", "Est. Delay": f"+{optimized_delay_days} Days", "Routing Score": f"{score:.1f}"},
+            {"Rank": 2, "Source": "Atlantic", "Corridor": "Atlantic -> Suez -> Jamnagar", "Est. Delay": f"+{int(score * 1.5)} Days", "Routing Score": f"{score * 1.5:.1f}"},
+        ]
 
-    # Otherwise, return dynamic routes based on the calculated transit score
-    return [
-        {"Rank": 1, "Source": "West Africa (Spot Market)", "Corridor": "Cape of Good Hope -> Mumbai", "Est. Delay": f"+{int(score)} Days", "Cost Premium": "High", "Routing Score": f"{score:.1f}"},
-        {"Rank": 2, "Source": "US Gulf Coast", "Corridor": "Atlantic -> Suez -> Jamnagar", "Est. Delay": f"+{int(score * 1.5)} Days", "Cost Premium": "Medium", "Routing Score": f"{score * 1.5:.1f}"},
-    ]
+    financials = {
+        "naive_cost": f"${naive_cost_mm:.1f}M",
+        "optimized_cost": f"${optimized_cost_mm:.1f}M",
+        "ai_savings": f"${ai_savings_mm:.1f}M",
+    }
+
+    return {"routes": routes, "financials": financials}
