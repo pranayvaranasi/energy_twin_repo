@@ -1,0 +1,119 @@
+import json
+from pathlib import Path
+
+import plotly.graph_objects as go
+
+
+def _resolve_route_edges(active_routes, node_dict):
+    """Turn a route description into a sequence of node ids for highlighting."""
+    route_edges = []
+    for route in active_routes:
+        corridor = route.get("Corridor", "").lower()
+        if "cape of good hope" in corridor:
+            route_edges.extend([(2, 5), (5, 4)])
+        elif "suez" in corridor or "red sea" in corridor:
+            route_edges.extend([(1, 6), (6, 4)])
+        elif "pipeline" in corridor or "domestic" in corridor:
+            route_edges.extend([(3, 4)])
+        else:
+            # Fallback: highlight all active source/target combinations
+            source = route.get("Source")
+            if source and "west africa" in source.lower():
+                route_edges.extend([(2, 5), (5, 4)])
+            elif source and "us gulf coast" in source.lower():
+                route_edges.extend([(1, 6), (6, 4)])
+    return route_edges
+
+
+def generate_geospatial_twin(impact_data, active_routes):
+    """Generates an interactive Plotly map of the global supply chain."""
+    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
+    with open(data_path, "r") as f:
+        graph_data = json.load(f)
+
+    node_dict = {node["id"]: node for node in graph_data["nodes"]}
+    disrupted_ids = set(impact_data.get("disrupted_nodes", []))
+    active_ids = set(impact_data.get("base_nodes", []))
+    route_edges = _resolve_route_edges(active_routes, node_dict)
+
+    fig = go.Figure()
+
+    # Draw all default supply lines (faded)
+    for edge in graph_data["edges"]:
+        src = node_dict[edge["source"]]
+        tgt = node_dict[edge["target"]]
+        line_color = "rgba(150, 150, 150, 0.35)"
+        line_width = 1
+        dash = "solid"
+        if edge["source"] in disrupted_ids or edge["target"] in disrupted_ids:
+            line_color = "rgba(220, 20, 60, 0.7)"
+            line_width = 2
+            dash = "dash"
+
+        fig.add_trace(
+            go.Scattergeo(
+                lon=[src["lon"], tgt["lon"]],
+                lat=[src["lat"], tgt["lat"]],
+                mode="lines",
+                line=dict(width=line_width, color=line_color, dash=dash),
+                hoverinfo="skip",
+            )
+        )
+
+    # Highlight active route corridors in green
+    for src_id, tgt_id in route_edges:
+        if src_id in node_dict and tgt_id in node_dict:
+            src = node_dict[src_id]
+            tgt = node_dict[tgt_id]
+            fig.add_trace(
+                go.Scattergeo(
+                    lon=[src["lon"], tgt["lon"]],
+                    lat=[src["lat"], tgt["lat"]],
+                    mode="lines",
+                    line=dict(width=4, color="limegreen"),
+                    hoverinfo="skip",
+                )
+            )
+
+    # Plot nodes (red if disrupted, green if active, blue otherwise)
+    lats, lons, texts, colors, sizes = [], [], [], [], []
+    for node_id, node in node_dict.items():
+        lats.append(node["lat"])
+        lons.append(node["lon"])
+        texts.append(f"{node['name']} ({node['type']})")
+        if node_id in disrupted_ids:
+            colors.append("red")
+            sizes.append(16)
+        elif node_id in active_ids:
+            colors.append("limegreen")
+            sizes.append(14)
+        else:
+            colors.append("dodgerblue")
+            sizes.append(10)
+
+    fig.add_trace(
+        go.Scattergeo(
+            lon=lons,
+            lat=lats,
+            hovertext=texts,
+            mode="markers",
+            marker=dict(size=sizes, color=colors, line=dict(width=1, color="white")),
+        )
+    )
+
+    fig.update_layout(
+        title_text="Live Global Procurement Routing",
+        showlegend=False,
+        geo=dict(
+            projection_type="natural earth",
+            showland=True,
+            landcolor="rgb(243, 243, 243)",
+            countrycolor="rgb(204, 204, 204)",
+            coastlinecolor="rgb(204, 204, 204)",
+            lataxis=dict(range=[-40, 60]),
+            lonaxis=dict(range=[-120, 120]),
+        ),
+        margin={"r": 0, "t": 40, "l": 0, "b": 0},
+    )
+
+    return fig

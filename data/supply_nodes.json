@@ -4,38 +4,76 @@
       "id": 1,
       "name": "US Gulf Coast",
       "type": "refinery",
-      "capacity_mmbpd": 9.3
+      "capacity_mmbpd": 9.3,
+      "lat": 29.76,
+      "lon": -95.36
     },
     {
       "id": 2,
       "name": "West Africa",
       "type": "port",
-      "capacity_mmbpd": 5.1
+      "capacity_mmbpd": 5.1,
+      "lat": 4.05,
+      "lon": 8.50
     },
     {
       "id": 3,
       "name": "Middle East Hub",
       "type": "hub",
-      "capacity_mmbpd": 15.0
+      "capacity_mmbpd": 15.0,
+      "lat": 24.45,
+      "lon": 54.37
     },
     {
       "id": 4,
       "name": "Jamnagar",
       "type": "refinery",
-      "capacity_mmbpd": 2.3
+      "capacity_mmbpd": 2.3,
+      "lat": 22.33,
+      "lon": 69.95
     },
     {
       "id": 5,
       "name": "Cape of Good Hope",
       "type": "maritime_corridor",
-      "capacity_mmbpd": 0.0
+      "capacity_mmbpd": 0.0,
+      "lat": -34.83,
+      "lon": 20.00
+    },
+    {
+      "id": 6,
+      "name": "Red Sea / Suez",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": 27.88,
+      "lon": 34.26
     }
   ],
   "edges": [
     {
+      "source": 1,
+      "target": 5,
+      "type": "sea_lane"
+    },
+    {
+      "source": 1,
+      "target": 6,
+      "type": "sea_lane"
+    },
+    {
       "source": 2,
       "target": 5,
       "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 6,
+      "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 4,
+      "type": "pipeline"
     },
     {
       "source": 5,
@@ -43,9 +81,9 @@
       "type": "sea_lane"
     },
     {
-      "source": 1,
-      "target": 3,
-      "type": "pipeline"
+      "source": 6,
+      "target": 4,
+      "type": "sea_lane"
     }
   ]
 }

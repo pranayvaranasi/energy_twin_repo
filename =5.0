@@ -1,0 +1,8 @@
+Collecting plotly
+  Downloading plotly-6.8.0-py3-none-any.whl.metadata (9.0 kB)
+Requirement already satisfied: narwhals>=1.15.1 in /usr/local/python/3.12.1/lib/python3.12/site-packages (from plotly) (2.22.1)
+Requirement already satisfied: packaging in /home/codespace/.local/lib/python3.12/site-packages (from plotly) (26.0)
+Downloading plotly-6.8.0-py3-none-any.whl (9.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.9/9.9 MB 27.6 MB/s  0:00:00
+Installing collected packages: plotly
+Successfully installed plotly-6.8.0

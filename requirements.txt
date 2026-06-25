@@ -3,3 +3,4 @@ numpy>=1.25
 pandas>=2.0
 pytorch-lightning>=2.0
 pytorch-forecasting>=0.14.0
+plotly>=5.0

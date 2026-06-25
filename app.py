@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
@@ -81,7 +82,11 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
 
     st.divider()
     st.subheader("Adaptive Procurement Orchestrator")
-    st.markdown("Top alternative logistics corridors identified by the high-speed routing backend.")
+    st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones.")
+
+    with st.container():
+        live_map_fig = generate_geospatial_twin(impact_data, routes)
+        st.plotly_chart(live_map_fig, use_container_width=True)
 
     st.dataframe(routes, use_container_width=True)
 else:
