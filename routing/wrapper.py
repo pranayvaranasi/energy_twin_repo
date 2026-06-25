@@ -42,17 +42,34 @@ def get_optimized_corridors(impact_data):
         routes = [
             {
                 "Rank": 1,
-                "Source": "Strategic Reserves (SPR)",
-                "Corridor": "Domestic Pipeline Release",
+                "Source": "Strategic Reserves",
+                "Corridor": "Domestic Pipeline",
                 "Est. Delay": "0 Days",
-                "Cost Premium": "None",
+                "Port Congestion": "N/A",
+                "Grade Match": "100% (Blended)",
                 "Routing Score": "EMERGENCY DRAWDOWN",
             }
         ]
     else:
         routes = [
-            {"Rank": 1, "Source": "West Africa (Spot)", "Corridor": "Cape of Good Hope", "Est. Delay": f"+{optimized_delay_days} Days", "Routing Score": f"{score:.1f}"},
-            {"Rank": 2, "Source": "Atlantic", "Corridor": "Atlantic -> Suez -> Jamnagar", "Est. Delay": f"+{int(score * 1.5)} Days", "Routing Score": f"{score * 1.5:.1f}"},
+            {
+                "Rank": 1,
+                "Source": "West Africa (Spot)",
+                "Corridor": "Cape of Good Hope",
+                "Est. Delay": f"+{optimized_delay_days} Days",
+                "Port Congestion": "High (92% Cap)",
+                "Grade Match": "94% (Light Sweet)",
+                "Routing Score": f"{score:.1f}",
+            },
+            {
+                "Rank": 2,
+                "Source": "Atlantic",
+                "Corridor": "Atlantic -> Suez -> Jamnagar",
+                "Est. Delay": f"+{int(score * 1.5)} Days",
+                "Port Congestion": "Moderate (75% Cap)",
+                "Grade Match": "88% (Medium Sour)",
+                "Routing Score": f"{score * 1.5:.1f}",
+            },
         ]
 
     financials = {

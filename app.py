@@ -82,25 +82,36 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     st.divider()
 
     st.subheader(f"Scenario Impact: {disruption_event}")
-    col1, col2, col3 = st.columns(3)
-
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
     col1.metric(
-        label="Predicted Brent Crude Spike",
+        label="Brent Crude",
         value=impact_data["brent_spike"],
         delta=impact_data["brent_delta"],
         delta_color="inverse",
     )
     col2.metric(
-        label="Strategic Petroleum Reserve Cover",
+        label="SPR Cover",
         value=impact_data["spr_cover"],
         delta=impact_data["spr_delta"],
         delta_color="inverse",
     )
     col3.metric(
-        label="Refinery Run Rate",
+        label="Refinery Rate",
         value=impact_data["run_rate"],
         delta=impact_data["run_rate_delta"],
         delta_color="inverse",
+    )
+    col4.metric(
+        label="Grid Power Stress",
+        value=impact_data["power_stress"],
+        delta=impact_data["power_stress_delta"],
+        delta_color="inverse",
+    )
+    col5.metric(
+        label="GDP Trajectory",
+        value=impact_data["gdp_impact"],
+        delta=impact_data["gdp_delta"],
     )
 
     st.divider()
