@@ -19,19 +19,23 @@ def _resolve_route_edges(active_routes, node_dict):
     route_edges = []
     for route in active_routes:
         corridor = route.get("Corridor", "").lower()
+        target_id = 7 if "visakh" in corridor else 4
+        if target_id not in node_dict:
+            target_id = 4
+
         if "cape of good hope" in corridor:
-            route_edges.extend([(2, 5), (5, 4)])
+            route_edges.extend([(2, 5), (5, target_id)])
         elif "suez" in corridor or "red sea" in corridor:
-            route_edges.extend([(1, 6), (6, 4)])
+            route_edges.extend([(1, 6), (6, target_id)])
         elif "pipeline" in corridor or "domestic" in corridor:
             route_edges.extend([(3, 4)])
         else:
             # Fallback: highlight all active source/target combinations
             source = route.get("Source")
             if source and "west africa" in source.lower():
-                route_edges.extend([(2, 5), (5, 4)])
+                route_edges.extend([(2, 5), (5, target_id)])
             elif source and "us gulf coast" in source.lower():
-                route_edges.extend([(1, 6), (6, 4)])
+                route_edges.extend([(1, 6), (6, target_id)])
     return route_edges
 
 
@@ -43,6 +47,8 @@ def generate_geospatial_twin(impact_data, active_routes):
     disrupted_ids = set(impact_data.get("disrupted_nodes", []))
     active_ids = set(impact_data.get("base_nodes", []))
     route_edges = _resolve_route_edges(active_routes, node_dict)
+    for _, target_id in route_edges:
+        active_ids.add(target_id)
 
     fig = go.Figure()
 
@@ -78,7 +84,7 @@ def generate_geospatial_twin(impact_data, active_routes):
                     lon=[src["lon"], tgt["lon"]],
                     lat=[src["lat"], tgt["lat"]],
                     mode="lines",
-                    line=dict(width=4, color="limegreen"),
+                    line=dict(width=4, color="#00FFAA"),
                     hoverinfo="skip",
                 )
             )
@@ -104,7 +110,7 @@ def generate_geospatial_twin(impact_data, active_routes):
                 lon=ais_lons,
                 lat=ais_lats,
                 mode="markers",
-                marker=dict(size=4, color="gold", opacity=0.8, symbol="triangle-up"),
+                marker=dict(size=4, color="#FFD166", opacity=0.85, symbol="triangle-up"),
                 hoverinfo="text",
                 hovertext=ais_text,
             )
@@ -120,10 +126,10 @@ def generate_geospatial_twin(impact_data, active_routes):
             colors.append("red")
             sizes.append(16)
         elif node_id in active_ids:
-            colors.append("limegreen")
+            colors.append("#00FFAA")
             sizes.append(14)
         else:
-            colors.append("dodgerblue")
+            colors.append("#38BDF8")
             sizes.append(10)
 
     fig.add_trace(
@@ -132,7 +138,7 @@ def generate_geospatial_twin(impact_data, active_routes):
             lat=lats,
             hovertext=texts,
             mode="markers",
-            marker=dict(size=sizes, color=colors, line=dict(width=1, color="white")),
+            marker=dict(size=sizes, color=colors, line=dict(width=1, color="#E5E7EB")),
         )
     )
 
@@ -142,12 +148,18 @@ def generate_geospatial_twin(impact_data, active_routes):
         geo=dict(
             projection_type="natural earth",
             showland=True,
-            landcolor="rgb(243, 243, 243)",
-            countrycolor="rgb(204, 204, 204)",
-            coastlinecolor="rgb(204, 204, 204)",
+            landcolor="rgb(30, 30, 30)",
+            countrycolor="rgb(75, 85, 99)",
+            coastlinecolor="rgb(75, 85, 99)",
+            showocean=True,
+            oceancolor="rgb(10, 14, 23)",
+            bgcolor="rgba(0,0,0,0)",
             lataxis=dict(range=[-40, 60]),
             lonaxis=dict(range=[-120, 120]),
         ),
+        paper_bgcolor="#0A0E17",
+        plot_bgcolor="#0A0E17",
+        font=dict(color="#E5E7EB"),
         margin={"r": 0, "t": 40, "l": 0, "b": 0},
     )
 

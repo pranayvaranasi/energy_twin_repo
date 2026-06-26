@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#00FFAA" # A sleek, cyber-green for primary actions
+backgroundColor = "#0A0E17" # Deep navy/black background
+secondaryBackgroundColor = "#111827" # Slightly lighter for containers and sidebars
+textColor = "#E5E7EB" # Off-white text to reduce eye strain
+font = "sans serif"
