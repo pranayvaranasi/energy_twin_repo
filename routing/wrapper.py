@@ -1,5 +1,4 @@
 import ctypes
-import os
 import json
 import math
 from pathlib import Path
@@ -36,7 +35,7 @@ def _load_dynamic_graph():
 
     node_dict = {n["id"]: n for n in graph_data["nodes"]}
     max_node_id = max(node_dict.keys())
-    target_node = 4  # Jamnagar
+    target_nodes = [node_id for node_id, node in node_dict.items() if node.get("type") == "refinery"]
 
     capacities = [0.0] * (max_node_id + 1)
     for node_id, node in node_dict.items():
@@ -53,7 +52,7 @@ def _load_dynamic_graph():
         u_list.append(src)
         v_list.append(tgt)
 
-    return u_list, v_list, w_list, capacities, target_node, max_node_id, node_dict
+    return u_list, v_list, w_list, capacities, target_nodes, max_node_id, node_dict
 
 
 def get_optimized_corridors(impact_data):
@@ -65,8 +64,11 @@ def get_optimized_corridors(impact_data):
 
     bottlenecked_ports = []
 
+    selected_target = 4
+    selected_target_name = "Jamnagar"
+
     if router_lib is not None:
-        u_list, v_list, w_list, capacities, target_node, max_node_id, node_dict = _load_dynamic_graph()
+        u_list, v_list, w_list, capacities, target_nodes, max_node_id, node_dict = _load_dynamic_graph()
 
         for node_id, capacity in enumerate(capacities):
             if 0.0 < capacity < required_capacity and node_id in node_dict:
@@ -79,14 +81,25 @@ def get_optimized_corridors(impact_data):
         c_v = (ctypes.c_int * len(v_list))(*v_list)
         c_w = (ctypes.c_double * len(w_list))(*w_list)
         c_capacities = (ctypes.c_double * len(capacities))(*capacities)
-        c_req_cap = ctypes.c_double(required_capacity)
+        balanced_entry_capacity = required_capacity / max(len(target_nodes), 1)
+        c_req_cap = ctypes.c_double(balanced_entry_capacity)
 
-        score = router_lib.calculate_optimal_route(
-            c_nodes, len(node_ids), c_disrupted, len(disrupted_ids),
-            c_u, c_v, c_w, len(u_list),
-            c_capacities, c_req_cap,
-            target_node, max_node_id
-        )
+        candidate_scores = []
+        for target_node in target_nodes:
+            score = router_lib.calculate_optimal_route(
+                c_nodes, len(node_ids), c_disrupted, len(disrupted_ids),
+                c_u, c_v, c_w, len(u_list),
+                c_capacities, c_req_cap,
+                target_node, max_node_id
+            )
+            if score != -1.0:
+                candidate_scores.append((score, target_node))
+
+        if candidate_scores:
+            score, selected_target = min(candidate_scores, key=lambda candidate: candidate[0])
+            selected_target_name = node_dict[selected_target]["name"]
+        else:
+            score = -1.0
     else:
         score = sum(node_ids) * 2.5
 
@@ -99,12 +112,16 @@ def get_optimized_corridors(impact_data):
     optimized_cost_mm = optimized_delay_days * cost_per_day_delay
     ai_savings_mm = naive_cost_mm - optimized_cost_mm
 
+    russian_pivot = 8 in node_ids and (3 in disrupted_ids or 6 in disrupted_ids or 2 in disrupted_ids)
+    primary_source = "Russian Urals (Baltic)" if russian_pivot else "West Africa (Spot)"
+    primary_corridor = "Russian Urals -> Cape of Good Hope" if russian_pivot else "Cape of Good Hope"
+
     if score == -1.0:
         routes = [
             {
                 "Rank": 1,
-                "Source": "Strategic Reserves",
-                "Corridor": "Domestic Pipeline",
+                "Source": "Mangalore ISPRL (SPR)",
+                "Corridor": "Domestic SPR Pipeline",
                 "Est. Delay": "0 Days",
                 "Port Congestion": "N/A",
                 "Grade Match": "100% (Blended)",
@@ -115,19 +132,19 @@ def get_optimized_corridors(impact_data):
         routes = [
             {
                 "Rank": 1,
-                "Source": "West Africa (Spot)",
-                "Corridor": "Cape of Good Hope",
+                "Source": primary_source,
+                "Corridor": f"{primary_corridor} -> {selected_target_name}",
                 "Est. Delay": f"+{optimized_delay_days} Days",
-                "Port Congestion": "High (92% Cap)",
+                "Port Congestion": "Balanced across West/East Coast",
                 "Grade Match": "94% (Light Sweet)",
                 "Routing Score": f"{score:.1f}",
             },
             {
                 "Rank": 2,
                 "Source": "Atlantic",
-                "Corridor": "Atlantic -> Suez -> Jamnagar",
+                "Corridor": f"Atlantic -> Suez -> {selected_target_name}",
                 "Est. Delay": f"+{int(score * 1.5)} Days",
-                "Port Congestion": "Moderate (75% Cap)",
+                "Port Congestion": "Secondary entry option",
                 "Grade Match": "88% (Medium Sour)",
                 "Routing Score": f"{score * 1.5:.1f}",
             },
@@ -144,4 +161,6 @@ def get_optimized_corridors(impact_data):
         "financials": financials,
         "bottlenecks": bottlenecked_ports,
         "required_capacity": required_capacity,
+        "selected_entry_node": selected_target,
+        "selected_entry_name": selected_target_name,
     }
