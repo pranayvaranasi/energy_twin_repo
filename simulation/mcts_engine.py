@@ -2,10 +2,22 @@ import random
 from simulation.economic_impact_model import predict_economic_fallout
 
 SCENARIO_BASELINE = {
-    "Baseline (No Disruption)": {"base_nodes": [1, 2, 3], "disrupted_nodes": []},
-    "Red Sea Shipping Suspension (Houthi Threat)": {"base_nodes": [2, 4, 5], "disrupted_nodes": [6]},
-    "Strait of Hormuz Partial Closure": {"base_nodes": [1, 2], "disrupted_nodes": [3]},
-    "OPEC+ Emergency Supply Cut": {"base_nodes": [4, 6, 7], "disrupted_nodes": []},
+    "Baseline (No Disruption)": {
+        "base_nodes": [1, 2, 3, 8],
+        "disrupted_nodes": [],
+    },
+    "Red Sea Shipping Suspension (Houthi Threat)": {
+        "base_nodes": [1, 2, 3, 8],
+        "disrupted_nodes": [6],
+    },
+    "Strait of Hormuz Partial Closure": {
+        "base_nodes": [1, 2, 8],
+        "disrupted_nodes": [3],
+    },
+    "OPEC+ Emergency Supply Cut": {
+        "base_nodes": [1, 8],
+        "disrupted_nodes": [2, 3],
+    },
 }
 
 

@@ -81,6 +81,7 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         financials = routes_result.get("financials", {})
         bottlenecks = routes_result.get("bottlenecks", [])
         required_capacity = routes_result.get("required_capacity", 0.0)
+        selected_entry_name = routes_result.get("selected_entry_name", "Jamnagar")
 
     st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
     st.divider()
@@ -132,10 +133,12 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         st.subheader("Adaptive Procurement Orchestrator")
         st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones and physical volume limits.")
         
-        col_ops1, col_ops2 = st.columns([1, 1])
+        col_ops1, col_ops2, col_ops3 = st.columns([1, 1, 1])
         with col_ops1:
             st.caption(f"📊 **Required Reroute Volume:** {required_capacity:.2f} MMbpd")
         with col_ops2:
+            st.caption(f"🚢 **Selected Entry:** {selected_entry_name}")
+        with col_ops3:
             st.caption(f"⚡ Optimized in **{calc_time_ms:.3f} ms** via C++ Dijkstra $O(E + V \\log V)$")
 
         if bottlenecks:

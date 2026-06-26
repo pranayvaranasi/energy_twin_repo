@@ -19,19 +19,30 @@ def _resolve_route_edges(active_routes, node_dict):
     route_edges = []
     for route in active_routes:
         corridor = route.get("Corridor", "").lower()
+        target_id = 7 if "visakh" in corridor else 4
+        if target_id not in node_dict:
+            target_id = 4
+
         if "cape of good hope" in corridor:
-            route_edges.extend([(2, 5), (5, 4)])
+            source_id = 8 if "russian" in corridor else 2
+            route_edges.extend([(source_id, 5), (5, target_id)])
+        elif "malacca" in corridor:
+            route_edges.extend([(3, 10), (10, target_id)])
         elif "suez" in corridor or "red sea" in corridor:
-            route_edges.extend([(1, 6), (6, 4)])
+            source_id = 8 if "russian" in corridor else 1
+            route_edges.extend([(source_id, 6), (6, target_id)])
         elif "pipeline" in corridor or "domestic" in corridor:
-            route_edges.extend([(3, 4)])
+            source_id = 9 if "spr" in corridor or "domestic" in corridor else 3
+            route_edges.extend([(source_id, target_id)])
         else:
             # Fallback: highlight all active source/target combinations
             source = route.get("Source")
-            if source and "west africa" in source.lower():
-                route_edges.extend([(2, 5), (5, 4)])
+            if source and "russian" in source.lower():
+                route_edges.extend([(8, 5), (5, target_id)])
+            elif source and "west africa" in source.lower():
+                route_edges.extend([(2, 5), (5, target_id)])
             elif source and "us gulf coast" in source.lower():
-                route_edges.extend([(1, 6), (6, 4)])
+                route_edges.extend([(1, 6), (6, target_id)])
     return route_edges
 
 
@@ -43,6 +54,8 @@ def generate_geospatial_twin(impact_data, active_routes):
     disrupted_ids = set(impact_data.get("disrupted_nodes", []))
     active_ids = set(impact_data.get("base_nodes", []))
     route_edges = _resolve_route_edges(active_routes, node_dict)
+    for _, target_id in route_edges:
+        active_ids.add(target_id)
 
     fig = go.Figure()
 
@@ -78,7 +91,7 @@ def generate_geospatial_twin(impact_data, active_routes):
                     lon=[src["lon"], tgt["lon"]],
                     lat=[src["lat"], tgt["lat"]],
                     mode="lines",
-                    line=dict(width=4, color="limegreen"),
+                    line=dict(width=4, color="#00FFAA"),
                     hoverinfo="skip",
                 )
             )
@@ -104,27 +117,45 @@ def generate_geospatial_twin(impact_data, active_routes):
                 lon=ais_lons,
                 lat=ais_lats,
                 mode="markers",
-                marker=dict(size=4, color="gold", opacity=0.8, symbol="triangle-up"),
+                marker=dict(size=4, color="#FFD166", opacity=0.85, symbol="triangle-up"),
                 hoverinfo="text",
                 hovertext=ais_text,
             )
         )
 
-    # Plot nodes (red if disrupted, green if active, blue otherwise)
-    lats, lons, texts, colors, sizes = [], [], [], [], []
+    # Plot nodes (color-coded by infrastructure type)
+    lats, lons, texts, colors, sizes, symbols = [], [], [], [], [], []
     for node_id, node in node_dict.items():
         lats.append(node["lat"])
         lons.append(node["lon"])
-        texts.append(f"{node['name']} ({node['type']})")
-        if node_id in disrupted_ids:
-            colors.append("red")
-            sizes.append(16)
-        elif node_id in active_ids:
-            colors.append("limegreen")
+        node_type = node["type"].replace("_", " ").title()
+        texts.append(f"{node['name']} ({node_type})<br>Max Cap: {node['capacity_mmbpd']} MMbpd")
+
+        if node["type"] == "strategic_reserve":
+            colors.append("#A855F7")
             sizes.append(14)
+            symbols.append("square")
+        elif node["type"] == "refinery":
+            colors.append("#F97316")
+            sizes.append(12)
+            symbols.append("circle")
+        elif node["type"] == "maritime_corridor":
+            colors.append("#38BDF8")
+            sizes.append(8)
+            symbols.append("circle-open")
         else:
             colors.append("dodgerblue")
             sizes.append(10)
+            symbols.append("circle")
+
+        if node_id in active_ids:
+            colors[-1] = "#00FFAA"
+            sizes[-1] = max(sizes[-1], 14)
+
+        if node_id in disrupted_ids:
+            colors[-1] = "#EF4444"
+            sizes[-1] = 18
+            symbols[-1] = "x"
 
     fig.add_trace(
         go.Scattergeo(
@@ -132,7 +163,7 @@ def generate_geospatial_twin(impact_data, active_routes):
             lat=lats,
             hovertext=texts,
             mode="markers",
-            marker=dict(size=sizes, color=colors, line=dict(width=1, color="white")),
+            marker=dict(size=sizes, color=colors, symbol=symbols, line=dict(width=1.5, color="#E5E7EB")),
         )
     )
 
@@ -142,12 +173,18 @@ def generate_geospatial_twin(impact_data, active_routes):
         geo=dict(
             projection_type="natural earth",
             showland=True,
-            landcolor="rgb(243, 243, 243)",
-            countrycolor="rgb(204, 204, 204)",
-            coastlinecolor="rgb(204, 204, 204)",
+            landcolor="rgb(30, 30, 30)",
+            countrycolor="rgb(75, 85, 99)",
+            coastlinecolor="rgb(75, 85, 99)",
+            showocean=True,
+            oceancolor="rgb(10, 14, 23)",
+            bgcolor="rgba(0,0,0,0)",
             lataxis=dict(range=[-40, 60]),
             lonaxis=dict(range=[-120, 120]),
         ),
+        paper_bgcolor="#0A0E17",
+        plot_bgcolor="#0A0E17",
+        font=dict(color="#E5E7EB"),
         margin={"r": 0, "t": 40, "l": 0, "b": 0},
     )
 
