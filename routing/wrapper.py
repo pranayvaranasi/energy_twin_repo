@@ -53,7 +53,7 @@ def _load_dynamic_graph():
         u_list.append(src)
         v_list.append(tgt)
 
-    return u_list, v_list, w_list, capacities, target_node, max_node_id
+    return u_list, v_list, w_list, capacities, target_node, max_node_id, node_dict
 
 
 def get_optimized_corridors(impact_data):
@@ -63,8 +63,15 @@ def get_optimized_corridors(impact_data):
     severity = impact_data.get("calculated_severity", 5)
     required_capacity = severity * 0.5
 
+    bottlenecked_ports = []
+
     if router_lib is not None:
-        u_list, v_list, w_list, capacities, target_node, max_node_id = _load_dynamic_graph()
+        u_list, v_list, w_list, capacities, target_node, max_node_id, node_dict = _load_dynamic_graph()
+
+        for node_id, capacity in enumerate(capacities):
+            if 0.0 < capacity < required_capacity and node_id in node_dict:
+                port_name = node_dict[node_id].get("name", f"Node {node_id}")
+                bottlenecked_ports.append(f"{port_name} (Max limit: {capacity:.2f} MMbpd)")
 
         c_nodes = (ctypes.c_int * len(node_ids))(*node_ids)
         c_disrupted = (ctypes.c_int * len(disrupted_ids))(*disrupted_ids)
@@ -132,4 +139,9 @@ def get_optimized_corridors(impact_data):
         "ai_savings": f"${ai_savings_mm:.1f}M",
     }
 
-    return {"routes": routes, "financials": financials}
+    return {
+        "routes": routes,
+        "financials": financials,
+        "bottlenecks": bottlenecked_ports,
+        "required_capacity": required_capacity,
+    }

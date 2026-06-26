@@ -79,6 +79,8 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         calc_time_ms = (end_time - start_time) * 1000
         routes = routes_result.get("routes", [])
         financials = routes_result.get("financials", {})
+        bottlenecks = routes_result.get("bottlenecks", [])
+        required_capacity = routes_result.get("required_capacity", 0.0)
 
     st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
     st.divider()
@@ -138,8 +140,16 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
 
     st.divider()
     st.subheader("Adaptive Procurement Orchestrator")
-    st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones.")
+    st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones and physical volume limits.")
+    st.caption(f"📊 **Required Reroute Volume:** {required_capacity:.2f} MMbpd")
     st.caption(f"⚡ Corridors optimized in **{calc_time_ms:.3f} ms** using C++ Dijkstra's algorithm running at $O(E + V \\log V)$ complexity.")
+
+    if bottlenecks:
+        for port in bottlenecks:
+            st.warning(
+                f"**Capacity Limit Reached:** {port}. The routing engine mathematically bypassed this infrastructure bottleneck.",
+                icon="🚧",
+            )
     # Financial Impact Assessment (Executive-facing)
     if financials:
         st.subheader("Financial Impact Assessment")
