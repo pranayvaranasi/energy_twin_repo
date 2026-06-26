@@ -14,7 +14,7 @@
       "type": "port",
       "capacity_mmbpd": 5.1,
       "lat": 4.05,
-      "lon": 8.50
+      "lon": 8.5
     },
     {
       "id": 3,
@@ -38,7 +38,7 @@
       "type": "maritime_corridor",
       "capacity_mmbpd": 0.0,
       "lat": -34.83,
-      "lon": 20.00
+      "lon": 20.0
     },
     {
       "id": 6,
@@ -47,6 +47,14 @@
       "capacity_mmbpd": 0.0,
       "lat": 27.88,
       "lon": 34.26
+    },
+    {
+      "id": 7,
+      "name": "Visakhapatnam HPCL",
+      "type": "refinery",
+      "capacity_mmbpd": 1.5,
+      "lat": 17.68,
+      "lon": 83.21
     }
   ],
   "edges": [
@@ -83,6 +91,16 @@
     {
       "source": 6,
       "target": 4,
+      "type": "sea_lane"
+    },
+    {
+      "source": 5,
+      "target": 7,
+      "type": "sea_lane"
+    },
+    {
+      "source": 6,
+      "target": 7,
       "type": "sea_lane"
     }
   ]
