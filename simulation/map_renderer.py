@@ -144,7 +144,7 @@ def generate_geospatial_twin(impact_data, active_routes):
             sizes.append(8)
             symbols.append("circle-open")
         else:
-            colors.append("dodgerblue")
+            colors.append("#38BDF8")
             sizes.append(10)
             symbols.append("circle")
 
