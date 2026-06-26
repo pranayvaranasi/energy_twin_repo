@@ -118,6 +118,14 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         delta=impact_data["gdp_delta"],
     )
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.caption("📈 14-Day Macroeconomic Projection (TFT Model Output)")
+    st.line_chart(
+        impact_data["forecast_df"].set_index("Date"),
+        color="#ff4b4b",
+        height=150,
+    )
+
     st.divider()
 
     # Predictive Maintenance (PdM) Layer
@@ -197,6 +205,11 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     st.subheader("🤖 Supply Chain AI Copilot")
     st.markdown("Query the Digital Twin's underlying C++ and PyTorch data using Natural Language.")
 
+    def stream_data(text):
+        for word in text.split(" "):
+            yield word + " "
+            time.sleep(0.04)
+
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {
@@ -213,17 +226,17 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         st.chat_message("user").write(prompt)
 
         with st.spinner("Synthesizing multi-agent intelligence..."):
-            time.sleep(1.5)
+            time.sleep(0.5)
 
             prompt_lower = prompt.lower()
             if "bypass" in prompt_lower or "red sea" in prompt_lower:
                 reply = f"Based on the **{disruption_event}** scenario, the C++ Dijkstra engine mathematically penalized the primary corridor. Furthermore, we avoided {bottlenecks[0] if bottlenecks else 'adjacent ports'} to strictly adhere to the {required_capacity:.1f} MMbpd capacity constraint."
             elif "confidence" in prompt_lower or "mcts" in prompt_lower:
-                reply = f"Our Monte Carlo engine ran 1,000 stochastic rollouts and determined a **{impact_data.get('contagion_probability', '12%')} probability** of cascading contagion, with a model confidence interval of {impact_data.get('mcts_confidence', '95%')}."
+                reply = f"Our Monte Carlo engine ran 1,000 stochastic rollouts and determined a **{impact_data.get('contagion_probability', '12%')} probability** of cascading contagion, with a model confidence interval of {impact_data.get('mcts_confidence', '95%')}"
             else:
                 reply = f"The PyTorch Temporal Fusion Transformer predicts this event will cause a GDP hit of {impact_data.get('gdp_impact', '-0.5%')} and drop refinery run rates to {impact_data.get('run_rate', '85%')}. I recommend executing the SPR drawdown schedule immediately."
 
             st.session_state.messages.append({"role": "assistant", "content": reply})
-            st.chat_message("assistant").write(reply)
+            st.chat_message("assistant").write_stream(stream_data(reply))
 else:
     st.info("👈 Awaiting disruption trigger from the control panel.")

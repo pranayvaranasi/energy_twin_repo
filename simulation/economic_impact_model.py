@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 import numpy as np
 
@@ -91,9 +93,24 @@ def predict_economic_fallout(
     run_rate = max(55.0, 95.0 - (severity_score * 1.5) - (refinery_buffer * 0.2))
     spr_drawdown = max(1.0, 9.5 - (severity_score * 0.3) + (spr_release_cap * 0.15))
 
-    # NEW: Fulfilling the "Power Sector Stress" and "GDP Trajectory" requirements
     gdp_hit = (severity_score * 0.04) + abs(elasticity) * 0.1
     power_stress_index = min(100, 45 + (severity_score * 4.5) - (spr_release_cap * 2))
+
+    forecast_dates = pd.date_range(datetime.date.today(), periods=14, freq="D")
+    projected_prices = []
+    current_price = base_price
+    for i in range(14):
+        step_up = (predicted_spike - base_price) / 7 if i < 7 else 0
+        noise = np.random.normal(0, 0.4)
+        current_price = current_price + step_up + noise
+        projected_prices.append(round(current_price, 2))
+
+    forecast_df = pd.DataFrame(
+        {
+            "Date": forecast_dates,
+            "Projected Brent Crude ($/bbl)": projected_prices,
+        }
+    )
 
     return {
         "brent_spike": f"${predicted_spike:.2f}/bbl",
@@ -106,6 +123,7 @@ def predict_economic_fallout(
         "gdp_delta": f"-{gdp_hit:.2f}%",
         "power_stress": f"{int(power_stress_index)}/100",
         "power_stress_delta": f"+{int(severity_score * 4.5)} pts",
+        "forecast_df": forecast_df,
         "assumptions": {
             "elasticity": elasticity,
             "spr_release_cap": spr_release_cap,
