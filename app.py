@@ -119,61 +119,57 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.caption("📈 14-Day Macroeconomic Projection (TFT Model Output)")
-    st.line_chart(
-        impact_data["forecast_df"].set_index("Date"),
-        color="#ff4b4b",
-        height=150,
-    )
 
-    st.divider()
+    # NEW: Compartmentalize the AI layers into an Enterprise SaaS layout
+    op_tab, econ_tab, infra_tab = st.tabs([
+        "🌍 Global Operations & Routing", 
+        "📈 Macroeconomics & Policy", 
+        "🏭 Infrastructure Health (PdM)"
+    ])
 
-    # Predictive Maintenance (PdM) Layer
-    st.subheader("Infrastructure Health & Predictive Maintenance (PdM)")
-    st.markdown("Real-time asset degradation forecasting based on rerouted capacity loads.")
-    pdm_assessment = calculate_pdm_risk(impact_data["run_rate"], impact_data["power_stress"])
+    # --- TAB 1: GLOBAL OPERATIONS (C++ Engine & Plotly) ---
+    with op_tab:
+        st.subheader("Adaptive Procurement Orchestrator")
+        st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones and physical volume limits.")
+        
+        col_ops1, col_ops2 = st.columns([1, 1])
+        with col_ops1:
+            st.caption(f"📊 **Required Reroute Volume:** {required_capacity:.2f} MMbpd")
+        with col_ops2:
+            st.caption(f"⚡ Optimized in **{calc_time_ms:.3f} ms** via C++ Dijkstra $O(E + V \\log V)$")
 
-    with st.container(border=True):
-        pdm_col1, pdm_col2 = st.columns([1, 2])
-        with pdm_col1:
-            st.metric(
-                label=f"Asset: {pdm_assessment['asset']}",
-                value=pdm_assessment['failure_probability'],
-                delta="Failure Probability",
-                delta_color="inverse",
-            )
-        with pdm_col2:
-            st.markdown(f"**System Status:** {pdm_assessment['status']}")
-            st.markdown(f"**AI Recommendation:** {pdm_assessment['recommendation']}")
+        if bottlenecks:
+            for port in bottlenecks:
+                st.warning(f"**Capacity Limit Reached:** {port}. Algorithmically bypassed to prevent congestion.", icon="🚧")
+                
+        with st.container(border=True):
+            live_map_fig = generate_geospatial_twin(impact_data, routes)
+            st.plotly_chart(live_map_fig, use_container_width=True)
+            
+        st.dataframe(routes, use_container_width=True)
+        
+        if financials:
+            st.subheader("Financial Impact Assessment")
+            f_col1, f_col2, f_col3 = st.columns(3)
+            f_col1.metric("Cost of Inaction (Naive)", financials.get("naive_cost"))
+            f_col2.metric("Optimized Reroute Cost", financials.get("optimized_cost"))
+            f_col3.metric("AI-Driven Capital Savings", financials.get("ai_savings"), delta="Cost Avoided", delta_color="normal")
 
-    st.divider()
-    st.subheader("Adaptive Procurement Orchestrator")
-    st.markdown("Dynamic corridor identification bypassing disrupted geopolitical zones and physical volume limits.")
-    st.caption(f"📊 **Required Reroute Volume:** {required_capacity:.2f} MMbpd")
-    st.caption(f"⚡ Corridors optimized in **{calc_time_ms:.3f} ms** using C++ Dijkstra's algorithm running at $O(E + V \\log V)$ complexity.")
-
-    if bottlenecks:
-        for port in bottlenecks:
-            st.warning(
-                f"**Capacity Limit Reached:** {port}. The routing engine mathematically bypassed this infrastructure bottleneck.",
-                icon="🚧",
-            )
-    # Financial Impact Assessment (Executive-facing)
-    if financials:
-        st.subheader("Financial Impact Assessment")
-        f_col1, f_col2, f_col3 = st.columns(3)
-        f_col1.metric("Cost of Inaction (Naive Reroute)", financials.get("naive_cost"))
-        f_col2.metric("Optimized Reroute Cost", financials.get("optimized_cost"))
-        f_col3.metric("AI-Driven Capital Savings", financials.get("ai_savings"), delta="Cost Avoided", delta_color="normal")
+    # --- TAB 2: MACROECONOMICS (PyTorch TFT & SPR Agent) ---
+    with econ_tab:
+        st.subheader("14-Day Macroeconomic Projection")
+        st.markdown("Temporal Fusion Transformer (TFT) forecasting on cascading global shocks.")
+        st.line_chart(impact_data["forecast_df"].set_index("Date"), color="#ff4b4b", height=250)
+        
         st.divider()
-
+        
         st.subheader("Strategic Reserve Optimisation Agent")
         st.markdown("Recommended daily SPR drawdown schedule to bridge the calculated supply gap.")
-
+        
         delay_str = routes[0].get("Est. Delay", "+0 Days")
         delay_days = int("".join(filter(str.isdigit, delay_str))) if any(c.isdigit() for c in delay_str) else 14
+        
         spr_df = generate_spr_schedule(severity, delay_days, spr_release_cap)
-
         if spr_df is not None:
             st.area_chart(spr_df.set_index("Day")["Recommended SPR Release (M bpd)"], color="#FF4B4B")
             with st.expander("View Detailed Drawdown Policy"):
@@ -181,22 +177,35 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         else:
             st.success("No SPR drawdown required. Supply chain is stable.")
 
-        st.divider()
+    # --- TAB 3: INFRASTRUCTURE HEALTH (Predictive Maintenance) ---
+    with infra_tab:
+        st.subheader("Infrastructure Health & Predictive Maintenance")
+        st.markdown("Real-time asset degradation forecasting based on rerouted capacity loads.")
+        
+        pdm_assessment = calculate_pdm_risk(impact_data["run_rate"], impact_data["power_stress"])
+        with st.container(border=True):
+            pdm_col1, pdm_col2 = st.columns([1, 2])
+            with pdm_col1:
+                st.metric(
+                    label=f"Asset: {pdm_assessment['asset']}", 
+                    value=pdm_assessment['failure_probability'], 
+                    delta="Failure Probability", 
+                    delta_color="inverse"
+                )
+            with pdm_col2:
+                st.markdown(f"**System Status:** {pdm_assessment['status']}")
+                st.markdown(f"**AI Recommendation:** {pdm_assessment['recommendation']}")
 
-    with st.container():
-        live_map_fig = generate_geospatial_twin(impact_data, routes)
-        st.plotly_chart(live_map_fig, use_container_width=True)
-
-    st.dataframe(routes, use_container_width=True)
-
-    # Exportable report for executives
+    st.divider()
+    
+    # Exportable report for executives (Keep this right above the AI Copilot)
     df_export = pd.DataFrame(routes)
     csv = df_export.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Download Procurement Strategy Report (CSV)",
-        data=csv,
-        file_name='adaptive_procurement_strategy.csv',
-        mime='text/csv',
+        label="📥 Download Procurement Strategy Report (CSV)", 
+        data=csv, 
+        file_name='adaptive_procurement_strategy.csv', 
+        mime='text/csv', 
         type="secondary"
     )
 
