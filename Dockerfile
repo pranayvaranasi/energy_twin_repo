@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# Prevent Streamlit from prompting for setup during evaluation
+ENV STREAMLIT_SERVER_HEADLESS=true
+
 # Copy the requirements file and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

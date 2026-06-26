@@ -8,5 +8,6 @@ services:
       - "8501:8501"
     environment:
       - PYTHONUNBUFFERED=1
-    volumes:
-      - .:/app  # Allows for live-reloading during local development
+      - STREAMLIT_SERVER_HEADLESS=true
+    # volumes:
+    #   - .:/app  # Commented out for submission to avoid overwriting the compiled Linux binary
