@@ -14,6 +14,7 @@ if LIB_PATH.exists():
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.c_int,
+        ctypes.POINTER(ctypes.c_double), ctypes.c_double,
         ctypes.c_int, ctypes.c_int
     ]
     router_lib.calculate_optimal_route.restype = ctypes.c_double
@@ -28,7 +29,7 @@ def _haversine(lat1, lon1, lat2, lon2):
 
 
 def _load_dynamic_graph():
-    """Parses JSON and dynamically builds the edge weights using geospatial math."""
+    """Parses JSON to build the edges and physical capacity limits."""
     data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
     with open(data_path, "r") as f:
         graph_data = json.load(f)
@@ -36,6 +37,10 @@ def _load_dynamic_graph():
     node_dict = {n["id"]: n for n in graph_data["nodes"]}
     max_node_id = max(node_dict.keys())
     target_node = 4  # Jamnagar
+
+    capacities = [0.0] * (max_node_id + 1)
+    for node_id, node in node_dict.items():
+        capacities[node_id] = node.get("capacity_mmbpd", 0.0)
 
     u_list, v_list, w_list = [], [], []
     for edge in graph_data["edges"]:
@@ -48,26 +53,32 @@ def _load_dynamic_graph():
         u_list.append(src)
         v_list.append(tgt)
 
-    return u_list, v_list, w_list, target_node, max_node_id
+    return u_list, v_list, w_list, capacities, target_node, max_node_id
 
 
 def get_optimized_corridors(impact_data):
     """Use the compiled C++ routing engine to build alternative corridors."""
     node_ids = impact_data.get("base_nodes", [1, 2, 3])
     disrupted_ids = impact_data.get("disrupted_nodes", [])
+    severity = impact_data.get("calculated_severity", 5)
+    required_capacity = severity * 0.5
 
     if router_lib is not None:
-        u_list, v_list, w_list, target_node, max_node_id = _load_dynamic_graph()
+        u_list, v_list, w_list, capacities, target_node, max_node_id = _load_dynamic_graph()
 
         c_nodes = (ctypes.c_int * len(node_ids))(*node_ids)
         c_disrupted = (ctypes.c_int * len(disrupted_ids))(*disrupted_ids)
         c_u = (ctypes.c_int * len(u_list))(*u_list)
         c_v = (ctypes.c_int * len(v_list))(*v_list)
         c_w = (ctypes.c_double * len(w_list))(*w_list)
+        c_capacities = (ctypes.c_double * len(capacities))(*capacities)
+        c_req_cap = ctypes.c_double(required_capacity)
 
         score = router_lib.calculate_optimal_route(
             c_nodes, len(node_ids), c_disrupted, len(disrupted_ids),
-            c_u, c_v, c_w, len(u_list), target_node, max_node_id
+            c_u, c_v, c_w, len(u_list),
+            c_capacities, c_req_cap,
+            target_node, max_node_id
         )
     else:
         score = sum(node_ids) * 2.5

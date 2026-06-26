@@ -9,6 +9,7 @@ extern "C" double calculate_optimal_route(
     int* nodes, int node_count,
     int* disrupted_nodes, int disrupted_count,
     int* edge_u, int* edge_v, double* edge_w, int edge_count,
+    double* node_capacities, double required_capacity,
     int target_node, int max_node_id
 ) {
     if (nodes == nullptr || node_count <= 0) return 0.0;
@@ -57,6 +58,10 @@ extern "C" double calculate_optimal_route(
                 double weight = edge.second;
 
                 if (high_risk_zones.count(v)) weight += 10000.0;
+
+                if (node_capacities != nullptr && node_capacities[v] > 0.0 && node_capacities[v] < required_capacity) {
+                    weight += 10000.0;
+                }
 
                 if (current_cost + weight < min_cost[v]) {
                     min_cost[v] = current_cost + weight;
