@@ -35,43 +35,42 @@ extern "C" double calculate_optimal_route(
     }
 
     double best_overall_cost = std::numeric_limits<double>::infinity();
+    std::vector<double> min_cost(GRAPH_SIZE, std::numeric_limits<double>::infinity());
+    std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<>> pq;
 
     for (int i = 0; i < node_count; ++i) {
         int start_node = nodes[i];
         if (start_node < 0 || start_node >= GRAPH_SIZE || start_node == target_node) continue;
+        if (high_risk_zones.count(start_node)) continue;
 
-        std::vector<double> min_cost(GRAPH_SIZE, std::numeric_limits<double>::infinity());
-        std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<>> pq;
-
-        min_cost[start_node] = 0;
+        min_cost[start_node] = 0.0;
         pq.push({0.0, start_node});
+    }
 
-        while (!pq.empty()) {
-            auto [current_cost, u] = pq.top();
-            pq.pop();
+    while (!pq.empty()) {
+        auto [current_cost, u] = pq.top();
+        pq.pop();
 
-            if (current_cost > min_cost[u]) continue;
-            if (u == target_node) break;
-
-            for (auto& edge : adj[u]) {
-                int v = edge.first;
-                double weight = edge.second;
-
-                if (high_risk_zones.count(v)) weight += 10000.0;
-
-                if (node_capacities != nullptr && node_capacities[v] > 0.0 && node_capacities[v] < required_capacity) {
-                    weight += 10000.0;
-                }
-
-                if (current_cost + weight < min_cost[v]) {
-                    min_cost[v] = current_cost + weight;
-                    pq.push({min_cost[v], v});
-                }
-            }
+        if (current_cost > min_cost[u]) continue;
+        if (u == target_node) {
+            best_overall_cost = current_cost;
+            break;
         }
 
-        if (min_cost[target_node] < best_overall_cost) {
-            best_overall_cost = min_cost[target_node];
+        for (auto& edge : adj[u]) {
+            int v = edge.first;
+            double weight = edge.second;
+
+            if (high_risk_zones.count(v)) weight += 10000.0;
+
+            if (node_capacities != nullptr && node_capacities[v] > 0.0 && node_capacities[v] < required_capacity) {
+                weight += 10000.0;
+            }
+
+            if (current_cost + weight < min_cost[v]) {
+                min_cost[v] = current_cost + weight;
+                pq.push({min_cost[v], v});
+            }
         }
     }
 
