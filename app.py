@@ -7,6 +7,7 @@ from simulation.pdm_agent import calculate_pdm_risk
 from simulation.spr_agent import generate_spr_schedule
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
+from simulation.inventory_agent import calculate_stranded_inventory
 
 st.set_page_config(page_title="Supply Chain Digital Twin", layout="wide")
 
@@ -83,6 +84,12 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         required_capacity = routes_result.get("required_capacity", 0.0)
         selected_entry_name = routes_result.get("selected_entry_name", "Jamnagar")
 
+    inventory_result = calculate_stranded_inventory(
+        impact_data.get("disrupted_nodes", []),
+        severity,
+        current_brent_price=80.0,
+    )
+
     st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
     st.divider()
 
@@ -144,6 +151,16 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         if bottlenecks:
             for port in bottlenecks:
                 st.warning(f"**Capacity Limit Reached:** {port}. Algorithmically bypassed to prevent congestion.", icon="🚧")
+
+        if inventory_result:
+            with st.container(border=True):
+                st.subheader("Stranded Asset & Deficit Tracker")
+                st.caption("BFS traversal of downstream dependent refineries and stranded crude volume")
+                st.write(f"**Inventory Status:** {inventory_result['inventory_status']}")
+                st.write(f"**Stranded Volume:** {inventory_result['stranded_volume']}")
+                st.write(f"**Daily Financial Deficit:** {inventory_result['daily_financial_deficit']}")
+                if inventory_result.get("affected_dependents"):
+                    st.write("**Affected Dependents:** " + ", ".join(inventory_result["affected_dependents"]))
                 
         with st.container(border=True):
             live_map_fig = generate_geospatial_twin(impact_data, routes)
