@@ -96,38 +96,37 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     st.subheader(f"Scenario Impact: {disruption_event}")
     col1, col2, col3, col4, col5 = st.columns(5)
     
+    st.subheader(f"Scenario Impact: {disruption_event}")
+    col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric(
         label="Brent Crude",
-        value=impact_data["brent_spike"],
-        delta=impact_data["brent_delta"],
+        value=impact_data.get("brent_spike", "N/A"),
+        delta=impact_data.get("brent_delta", "0%"),
         delta_color="inverse",
     )
     col2.metric(
         label="SPR Cover",
-        value=impact_data["spr_cover"],
-        delta=impact_data["spr_delta"],
+        value=impact_data.get("spr_cover", "N/A"),
+        delta=impact_data.get("spr_delta", "0 Days"),
         delta_color="inverse",
     )
     col3.metric(
         label="Refinery Rate",
-        value=impact_data["run_rate"],
-        delta=impact_data["run_rate_delta"],
+        value=impact_data.get("run_rate", "N/A"),
+        delta=impact_data.get("run_rate_delta", "0%"),
         delta_color="inverse",
     )
     col4.metric(
         label="Grid Power Stress",
-        value=impact_data["power_stress"],
-        delta=impact_data["power_stress_delta"],
+        value=impact_data.get("power_stress", "N/A"),
+        delta=impact_data.get("power_stress_delta", "0%"),
         delta_color="inverse",
     )
     col5.metric(
         label="GDP Trajectory",
-        value=impact_data["gdp_impact"],
-        delta=impact_data["gdp_delta"],
+        value=impact_data.get("gdp_impact", "N/A"),
+        delta=impact_data.get("gdp_delta", "0%"),
     )
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
     # NEW: Compartmentalize the AI layers into an Enterprise SaaS layout
     op_tab, econ_tab, infra_tab = st.tabs([
         "🌍 Global Operations & Routing", 
