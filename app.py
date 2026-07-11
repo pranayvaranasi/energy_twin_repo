@@ -260,14 +260,14 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": "I am your Logistics Copilot. I have loaded the live C++ routing metrics, MCTS contagion probabilities, and PyTorch macro-forecasts. How can I assist your supply chain decisions today?",
+                "content": "I am your Logistics Copilot. I have loaded the live C++ routing metrics, MCTS contagion probabilities, PyTorch macro-forecasts, and the BFS Stranded Asset tracker. How can I assist your supply chain decisions today?",
             }
         ]
 
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
-    if prompt := st.chat_input("E.g., 'Why did the C++ engine bypass the Red Sea?'"):
+    if prompt := st.chat_input("E.g., 'How much money are we losing per day from stranded assets?'"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
 
@@ -275,10 +275,17 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
             time.sleep(0.5)
 
             prompt_lower = prompt.lower()
+
             if "bypass" in prompt_lower or "red sea" in prompt_lower:
                 reply = f"Based on the **{disruption_event}** scenario, the C++ Dijkstra engine mathematically penalized the primary corridor. Furthermore, we avoided {bottlenecks[0] if bottlenecks else 'adjacent ports'} to strictly adhere to the {required_capacity:.1f} MMbpd capacity constraint."
             elif "confidence" in prompt_lower or "mcts" in prompt_lower:
-                reply = f"Our Monte Carlo engine ran 1,000 stochastic rollouts and determined a **{impact_data.get('contagion_probability', '12%')} probability** of cascading contagion, with a model confidence interval of {impact_data.get('mcts_confidence', '95%')}"
+                reply = f"Our Monte Carlo engine ran 1,000 stochastic rollouts and determined a **{impact_data.get('contagion_probability', '12%')} probability** of cascading contagion, with a model confidence interval of {impact_data.get('mcts_confidence', '95%')}."
+            elif "stranded" in prompt_lower or "loss" in prompt_lower or "money" in prompt_lower or "deficit" in prompt_lower:
+                if inventory_result:
+                    deps = ", ".join(inventory_result.get("affected_dependents", ["downstream refineries"]))
+                    reply = f"The BFS graph traversal detected that **{inventory_result['stranded_volume']}** of crude is currently stranded at the disrupted nodes. This is causing a severe downstream starvation risk for {deps}, resulting in a massive **{inventory_result['daily_financial_deficit']}**. I recommend immediately sourcing alternative barrels from the East Coast or executing the SPR drawdown."
+                else:
+                    reply = "Our BFS inventory tracker shows no critical stranded assets or financial deficits under the current baseline scenario."
             else:
                 reply = f"The PyTorch Temporal Fusion Transformer predicts this event will cause a GDP hit of {impact_data.get('gdp_impact', '-0.5%')} and drop refinery run rates to {impact_data.get('run_rate', '85%')}. I recommend executing the SPR drawdown schedule immediately."
 
