@@ -185,7 +185,8 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
                     )
 
         with st.container(border=True):
-            live_map_fig = generate_geospatial_twin(impact_data, routes)
+            # Pass the inventory_result so the map can render starvation alerts!
+            live_map_fig = generate_geospatial_twin(impact_data, routes, inventory_result)
             st.plotly_chart(live_map_fig, use_container_width=True)
             
         st.dataframe(routes, use_container_width=True)
