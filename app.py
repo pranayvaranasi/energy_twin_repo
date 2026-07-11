@@ -30,10 +30,16 @@ if st.sidebar.button("Fetch Live Intelligence Signal"):
     with st.spinner("NLP Agent scanning global news feeds..."):
         time.sleep(1)  # Simulate API latency
         signal_data = ingest_and_classify_news()
-        
+
         st.sidebar.warning(f"**Latest Intel:** {signal_data['headline']}")
         st.sidebar.info(f"**AI Classification:** {signal_data['trigger_event']}\n\n**Severity:** {signal_data['calculated_severity']}/10")
-        
+
+        st.sidebar.markdown("### 🧠 Watcher Agent Analysis")
+        st.sidebar.info(
+            f"**Reasoning:** {signal_data.get('reasoning')}\n\n"
+            f"**Confidence:** {signal_data.get('confidence_score')}"
+        )
+
         # Override manual settings with AI detected settings
         disruption_event = signal_data['trigger_event']
         severity = signal_data['calculated_severity']
