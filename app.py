@@ -153,15 +153,32 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
                 st.warning(f"**Capacity Limit Reached:** {port}. Algorithmically bypassed to prevent congestion.", icon="🚧")
 
         if inventory_result:
+            st.markdown("<br>", unsafe_allow_html=True)
             with st.container(border=True):
-                st.subheader("Stranded Asset & Deficit Tracker")
-                st.caption("BFS traversal of downstream dependent refineries and stranded crude volume")
-                st.write(f"**Inventory Status:** {inventory_result['inventory_status']}")
-                st.write(f"**Stranded Volume:** {inventory_result['stranded_volume']}")
-                st.write(f"**Daily Financial Deficit:** {inventory_result['daily_financial_deficit']}")
+                st.subheader("⚠️ Stranded Asset & Deficit Tracker")
+                st.caption("BFS impact-tree traversal calculating downstream starvation and stranded maritime crude.")
+
+                inv_col1, inv_col2, inv_col3 = st.columns(3)
+                inv_col1.metric("Stranded Volume", inventory_result["stranded_volume"])
+                inv_col2.metric(
+                    "Daily Financial Deficit",
+                    inventory_result["daily_financial_deficit"],
+                    delta="- Capital Drain",
+                    delta_color="inverse",
+                )
+
+                status_color = "🔴" if "CRITICAL" in inventory_result["inventory_status"] else "🟠"
+                inv_col3.markdown(
+                    f"**Network Status:**<br>{status_color} {inventory_result['inventory_status']}",
+                    unsafe_allow_html=True,
+                )
+
                 if inventory_result.get("affected_dependents"):
-                    st.write("**Affected Dependents:** " + ", ".join(inventory_result["affected_dependents"]))
-                
+                    st.error(
+                        f"**Downstream Starvation Risk:** {', '.join(inventory_result['affected_dependents'])}",
+                        icon="📉",
+                    )
+
         with st.container(border=True):
             live_map_fig = generate_geospatial_twin(impact_data, routes)
             st.plotly_chart(live_map_fig, use_container_width=True)
