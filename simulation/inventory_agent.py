@@ -93,6 +93,7 @@ def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=
 
     # Unplanned downstream production downtime in heavy refining averages $250,000/hour ($6M/day)
     daily_stoppage_risk = len(impacted_refineries) * 250_000 * 24 if impacted_refineries else 0.0
+    affected_dependents = list(impacted_refineries.keys())
 
     return {
         "stranded_volume": f"{stranded_volume_mmbpd:.2f} MMbpd",
@@ -100,5 +101,6 @@ def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=
         "daily_holding_cost": f"${daily_holding_cost:,.0f} USD / Day",
         "operational_stoppage_exposure": f"${daily_stoppage_risk:,.0f} USD / Day",
         "inventory_status": "CRITICAL: Supply Starvation" if severity >= 7 else "WARNING: Congested Flow",
+        "affected_dependents": affected_dependents,
         "refinery_impacts": refinery_reports,
     }
