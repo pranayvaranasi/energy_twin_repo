@@ -224,20 +224,31 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
     with infra_tab:
         st.subheader("Infrastructure Health & Predictive Maintenance")
         st.markdown("Real-time asset degradation forecasting based on rerouted capacity loads.")
-        
+
         pdm_assessment = calculate_pdm_risk(impact_data["run_rate"], impact_data["power_stress"])
         with st.container(border=True):
-            pdm_col1, pdm_col2 = st.columns([1, 2])
-            with pdm_col1:
-                st.metric(
-                    label=f"Asset: {pdm_assessment['asset']}", 
-                    value=pdm_assessment['failure_probability'], 
-                    delta="Failure Probability", 
-                    delta_color="inverse"
-                )
-            with pdm_col2:
-                st.markdown(f"**System Status:** {pdm_assessment['status']}")
-                st.markdown(f"**AI Recommendation:** {pdm_assessment['recommendation']}")
+            pdm_col1, pdm_col2, pdm_col3 = st.columns(3)
+
+            pdm_col1.metric(
+                label=f"Asset: {pdm_assessment['asset']}",
+                value=pdm_assessment['failure_probability'],
+                delta="Failure Risk",
+                delta_color="inverse",
+            )
+            pdm_col2.metric(
+                label="Remaining Useful Life (RUL)",
+                value=pdm_assessment['rul_days'],
+                delta="Accelerated Depletion",
+                delta_color="inverse",
+            )
+            pdm_col3.metric(
+                label="LSTM-AE Anomaly Score",
+                value=pdm_assessment['lstm_anomaly_score'],
+            )
+
+            st.markdown("---")
+            st.markdown(f"**System Status:** {pdm_assessment['status']}")
+            st.markdown(f"**AI Recommendation:** {pdm_assessment['recommendation']}")
 
     st.divider()
     
