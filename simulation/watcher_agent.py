@@ -3,53 +3,95 @@ import json
 import os
 import random
 
-# Attempt to load Generative AI library for live inference
+# 1. Attempt to load Gemini LLM
 try:
     import google.generativeai as genai
-except ImportError:  # pragma: no cover - optional dependency
+    LLM_AVAILABLE = True
+except ImportError:
     genai = None
+    LLM_AVAILABLE = False
 
-LLM_AVAILABLE = genai is not None
+# 2. Attempt to load Exa Search (Active Semantic Hunting)
+try:
+    from exa_py import Exa
+    EXA_AVAILABLE = True
+except ImportError:
+    Exa = None
+    EXA_AVAILABLE = False
 
-# Attempt to load feedparser for LIVE internet ingestion (Agent-Reach style)
+# 3. Attempt to load Feedparser (Passive RSS Fallback)
 try:
     import feedparser
     RSS_AVAILABLE = True
 except ImportError:
+    feedparser = None
     RSS_AVAILABLE = False
 
-# Fallback mock data in case of no internet / no feedparser
 MOCK_NEWS_API_RESPONSE = [
-    {"source": "Reuters", "headline": "BREAKING: Houthi rebels claim responsibility for attack on oil tanker near Bab el-Mandeb strait."},
-    {"source": "Bloomberg", "headline": "OPEC+ holds emergency meeting in Vienna, unexpected 2M bpd quota cuts announced for next quarter."},
-    {"source": "Al Jazeera", "headline": "Diplomatic tensions rise; military vessels temporarily block commercial lanes in Strait of Hormuz."},
-    {"source": "Platts", "headline": "Global markets stabilize as Middle East supply chain routes resume normal operations."},
+    {"source": "Reuters", "headline": "BREAKING: Houthi rebels claim responsibility for attack on oil tanker near Bab el-Mandeb strait.", "highlight": ""},
+    {"source": "Bloomberg", "headline": "OPEC+ holds emergency meeting in Vienna, unexpected 2M bpd quota cuts announced for next quarter.", "highlight": ""},
+    {"source": "Al Jazeera", "headline": "Diplomatic tensions rise; military vessels temporarily block commercial lanes in Strait of Hormuz.", "highlight": ""},
 ]
 
-# Live Geopolitical & Energy Feeds
 LIVE_RSS_FEEDS = [
     {"source": "OilPrice.com (Live)", "url": "https://oilprice.com/rss/main"},
     {"source": "Al Jazeera (Live)", "url": "https://www.aljazeera.com/xml/rss/all.xml"},
 ]
 
 
+def _active_exa_hunt():
+    """Actively hunts for breaking geopolitical energy news using Exa's neural search."""
+    exa_api_key = os.getenv("EXA_API_KEY")
+    if not EXA_AVAILABLE or not exa_api_key:
+        return None
+
+    try:
+        exa = Exa(exa_api_key)
+        response = exa.search(
+            query="breaking news today regarding Strait of Hormuz blockades, Red Sea shipping attacks, or OPEC oil production cuts",
+            type="auto",
+            category="news",
+            num_results=1,
+            contents={"highlights": True},
+        )
+
+        if getattr(response, "results", None):
+            top_hit = response.results[0]
+            domain = top_hit.url.split("/")[2].replace("www.", "") if getattr(top_hit, "url", None) else "unknown"
+            highlights = getattr(top_hit, "highlights", []) or []
+            return {
+                "source": f"Exa Neural Search ({domain})",
+                "headline": getattr(top_hit, "title", "Live geopolitical headline detected"),
+                "highlight": highlights[0] if highlights else "",
+            }
+    except Exception as e:
+        print(f"Exa search failed, cascading to RSS: {e}")
+
+    return None
+
+
 def _get_live_news(headline_override=None):
-    """Fetch the latest headline from live RSS feeds or fallback to mocks."""
+    """Multi-tier data ingestion: Exa Search -> Live RSS -> Local Mocks"""
     if headline_override:
-        return {"source": "Manual Inject", "headline": headline_override}
+        return {"source": "Manual Inject", "headline": headline_override, "highlight": ""}
+
+    exa_result = _active_exa_hunt()
+    if exa_result:
+        return exa_result
 
     if RSS_AVAILABLE:
         try:
             feed_info = random.choice(LIVE_RSS_FEEDS)
             feed = feedparser.parse(feed_info["url"])
-            if feed.entries:
+            if getattr(feed, "entries", None):
                 latest_entry = feed.entries[0]
                 return {
                     "source": feed_info["source"],
-                    "headline": latest_entry.title,
+                    "headline": getattr(latest_entry, "title", "Live geopolitical headline detected"),
+                    "highlight": "",
                 }
         except Exception as e:
-            print(f"Live RSS fetch failed, falling back to mocks: {e}")
+            print(f"Live RSS fetch failed, cascading to mocks: {e}")
 
     return random.choice(MOCK_NEWS_API_RESPONSE)
 
@@ -88,31 +130,33 @@ def _mock_llm_extraction(news_text):
 
 def ingest_and_classify_news(headline_override=None, api_key=None, headlines=None):
     """
-    RAG-powered NLP agent that attempts live LLM inference and gracefully falls back to a local heuristic.
+    RAG-powered NLP agent that actively hunts for news via Exa, parses via Gemini,
+    and gracefully falls back to local heuristics if APIs are unavailable.
     """
     if headlines:
-        news_item = {"source": "List Input", "headline": headlines[0]}
+        news_item = {"source": "List Input", "headline": headlines[0], "highlight": ""}
     else:
         news_item = _get_live_news(headline_override)
 
     latest_news = news_item["headline"]
+    context_snippet = news_item.get("highlight", "")
 
     retrieved_context = """
     [KNOWLEDGE BASE MATCHES]
-    - DOC_01: Houthi threats in the Red Sea typically disrupt 12-15% of global maritime chokepoint traffic, severely impacting Suez transit times. Historic severity: 8-10.
-    - DOC_02: OPEC+ has historically used 1.5M - 2M bpd quota cuts to stabilize prices during demand shocks. Historic severity: 6-8.
-    - DOC_03: The Strait of Hormuz handles ~20% of global oil consumption. Any military blockade triggers immediate macroeconomic contagion. Historic severity: 9-10.
+    - DOC_01: Houthi threats in the Red Sea typically disrupt 12-15% of global maritime chokepoint traffic. Historic severity: 8-10.
+    - DOC_02: OPEC+ uses 1.5M - 2M bpd quota cuts to stabilize prices. Historic severity: 6-8.
+    - DOC_03: Strait of Hormuz handles ~20% of global oil. Blockades trigger immediate contagion. Historic severity: 9-10.
     """
 
     system_prompt = f"""
     You are 'Watcher', a Geopolitical Risk Intelligence AI operating within an Energy Supply Chain Digital Twin.
     Your task is to synthesize live news feeds with retrieved historical context and output a strict JSON payload.
 
-    RETRIEVED CONTEXT:
+    RETRIEVED CONTEXT: 
     {retrieved_context}
 
-    LIVE NEWS FEED:
-    "{latest_news}"
+    LIVE NEWS FEED HEADLINE: "{latest_news}"
+    NEWS ARTICLE HIGHLIGHT: "{context_snippet}"
 
     Analyze the threat. You MUST map the event to one of the following exact 'trigger_event' strings if applicable:
     - "Red Sea Shipping Suspension (Houthi Threat)"
@@ -121,33 +165,33 @@ def ingest_and_classify_news(headline_override=None, api_key=None, headlines=Non
     - "Baseline (No Disruption)"
 
     Return ONLY valid JSON matching this schema:
-    {{
-        "trigger_event": "String",
-        "calculated_severity": "Integer (1-10)",
-        "confidence_score": "Float (0.00-1.00)",
-        "reasoning": "A 1-sentence explanation of your assessment based on the context."
+    {{"trigger_event": "String",
+      "calculated_severity": "Integer (1-10)",
+      "confidence_score": "Float (0.00-1.00)",
+      "reasoning": "A 1-sentence explanation of your assessment based on the context."
     }}
     """
 
-    api_key = api_key or os.getenv("GEMINI_API_KEY")
+    gemini_key = api_key or os.getenv("GEMINI_API_KEY")
     extracted_data = None
 
-    if LLM_AVAILABLE and api_key:
+    if LLM_AVAILABLE and gemini_key:
         try:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel(
                 "gemini-1.5-flash",
                 generation_config={"response_mime_type": "application/json"},
             )
             response = model.generate_content(system_prompt)
             parsed = json.loads(response.text)
+
             extracted_data = {
                 "trigger_event": parsed.get("trigger_event", "Baseline (No Disruption)"),
                 "calculated_severity": int(parsed.get("calculated_severity", 1)),
                 "confidence_score": float(parsed.get("confidence_score", 0.90)),
                 "reasoning": parsed.get("reasoning", "Live LLM response parsed successfully."),
             }
-        except Exception as exc:  # pragma: no cover - fallback path
+        except Exception as exc:
             print(f"LLM API failed, falling back to heuristic: {exc}")
 
     if not extracted_data:
