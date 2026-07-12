@@ -223,25 +223,53 @@ with op_tab:
             st.info("System operating at optimal parameters. No logistics bottlenecks reported.")
 
 with econ_tab:
-    st.subheader("Macroeconomic Projections & Policy")
-    col_chart, col_data = st.columns([2, 1])
+    st.subheader("Macroeconomic Projections & Strategic Mitigation Policy")
+    st.caption("AI-driven rationing policy modeling the depletion of India's 39M Barrel underground caverns.")
 
     spr_df = generate_spr_schedule(severity, delay_days=14, max_spr_capacity_mbpd=spr_release_cap)
 
     if spr_df is not None and not spr_df.empty:
+        col_chart, col_data = st.columns([2.2, 1.3])
+
         with col_chart:
-            st.markdown("##### Recommended Strategic Petroleum Reserve (SPR) Drawdown Curve")
-            spr_chart = px.area(
-                spr_df,
-                x="Day",
-                y=["Supply Gap (M bpd)", "Recommended SPR Release (M bpd)"],
-                color_discrete_sequence=["#EF4444", "#00FFAA"],
-            )
-            st.plotly_chart(spr_chart, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("##### 📉 SPR Drawdown Trajectory")
+                spr_chart = px.area(
+                    spr_df,
+                    x="Day",
+                    y=["Supply Gap (M bpd)", "Recommended SPR Release (M bpd)"],
+                    color_discrete_sequence=["rgba(239, 68, 68, 0.15)", "rgba(0, 255, 170, 0.6)"],
+                )
+
+                spr_chart.update_layout(
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1,
+                        title=None,
+                    ),
+                    margin=dict(l=0, r=0, t=40, b=0),
+                    xaxis=dict(showgrid=False, zeroline=False, title="Crisis Timeline"),
+                    yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, title="Volume (MMbpd)"),
+                    hovermode="x unified",
+                )
+
+                spr_chart.update_traces(line=dict(width=2))
+                st.plotly_chart(spr_chart, use_container_width=True)
 
         with col_data:
-            st.markdown("##### Daily Dispatch Ledger")
-            st.dataframe(spr_df, use_container_width=True, hide_index=True)
+            with st.container(border=True):
+                st.markdown("##### 📋 Daily Dispatch Ledger")
+                st.dataframe(
+                    spr_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=380,
+                )
     else:
         st.info("No reserve draws required. National supply reserves are untouched.")
 
