@@ -11,31 +11,46 @@ except ImportError:  # pragma: no cover - optional dependency
 
 LLM_AVAILABLE = genai is not None
 
-# Simulate a real API payload from a feed like GDELT or NewsAPI
+# Attempt to load feedparser for LIVE internet ingestion (Agent-Reach style)
+try:
+    import feedparser
+    RSS_AVAILABLE = True
+except ImportError:
+    RSS_AVAILABLE = False
+
+# Fallback mock data in case of no internet / no feedparser
 MOCK_NEWS_API_RESPONSE = [
-    {
-        "source": "Reuters",
-        "headline": "BREAKING: Houthi rebels claim responsibility for attack on oil tanker near Bab el-Mandeb strait.",
-    },
-    {
-        "source": "Bloomberg",
-        "headline": "OPEC+ holds emergency meeting in Vienna, unexpected 2M bpd quota cuts announced for next quarter.",
-    },
-    {
-        "source": "Al Jazeera",
-        "headline": "Diplomatic tensions rise; military vessels temporarily block commercial lanes in Strait of Hormuz.",
-    },
-    {
-        "source": "Platts",
-        "headline": "Global markets stabilize as Middle East supply chain routes resume normal operations.",
-    },
+    {"source": "Reuters", "headline": "BREAKING: Houthi rebels claim responsibility for attack on oil tanker near Bab el-Mandeb strait."},
+    {"source": "Bloomberg", "headline": "OPEC+ holds emergency meeting in Vienna, unexpected 2M bpd quota cuts announced for next quarter."},
+    {"source": "Al Jazeera", "headline": "Diplomatic tensions rise; military vessels temporarily block commercial lanes in Strait of Hormuz."},
+    {"source": "Platts", "headline": "Global markets stabilize as Middle East supply chain routes resume normal operations."},
+]
+
+# Live Geopolitical & Energy Feeds
+LIVE_RSS_FEEDS = [
+    {"source": "OilPrice.com (Live)", "url": "https://oilprice.com/rss/main"},
+    {"source": "Al Jazeera (Live)", "url": "https://www.aljazeera.com/xml/rss/all.xml"},
 ]
 
 
 def _get_live_news(headline_override=None):
-    """Simulate fetching the latest news from a live endpoint."""
+    """Fetch the latest headline from live RSS feeds or fallback to mocks."""
     if headline_override:
         return {"source": "Manual Inject", "headline": headline_override}
+
+    if RSS_AVAILABLE:
+        try:
+            feed_info = random.choice(LIVE_RSS_FEEDS)
+            feed = feedparser.parse(feed_info["url"])
+            if feed.entries:
+                latest_entry = feed.entries[0]
+                return {
+                    "source": feed_info["source"],
+                    "headline": latest_entry.title,
+                }
+        except Exception as e:
+            print(f"Live RSS fetch failed, falling back to mocks: {e}")
+
     return random.choice(MOCK_NEWS_API_RESPONSE)
 
 
@@ -56,12 +71,12 @@ def _mock_llm_extraction(news_text):
             "confidence_score": 0.88,
             "reasoning": "Strait of Hormuz blockade detected; critical chokepoint macroeconomic severity applied.",
         }
-    if "opec" in text:
+    if "opec" in text or "quota" in text or "barrel" in text or "oil" in text:
         return {
             "trigger_event": "OPEC+ Emergency Supply Cut",
             "calculated_severity": 7,
             "confidence_score": 0.96,
-            "reasoning": "OPEC quota cut identified; moderate severity applied per historical pricing context.",
+            "reasoning": "Energy market pricing context identified; moderate severity applied.",
         }
     return {
         "trigger_event": "Baseline (No Disruption)",
