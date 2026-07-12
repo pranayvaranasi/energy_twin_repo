@@ -40,19 +40,20 @@ LIVE_RSS_FEEDS = [
 
 
 def _active_exa_hunt():
-    """Actively hunts for breaking geopolitical energy news using Exa's neural search."""
+    """Actively hunts for predictive geopolitical leading indicators using Exa's neural search."""
     exa_api_key = os.getenv("EXA_API_KEY")
     if not EXA_AVAILABLE or not exa_api_key:
         return None
 
     try:
         exa = Exa(exa_api_key)
+        # UPGRADE: Shifted from reactive "breaking news" to predictive "early warning signals"
         response = exa.search(
-            query="breaking news today regarding Strait of Hormuz blockades, Red Sea shipping attacks, or OPEC oil production cuts",
-            type="auto",
+            query="early warning signals OR leading indicators of Strait of Hormuz disruptions, Red Sea maritime insurance premium spikes, OPEC+ backdoor negotiations, or naval fleet repositioning in the Middle East",
+            type="neural", # Use neural for deep semantic understanding of "signals"
             category="news",
             num_results=1,
-            contents={"highlights": True},
+            contents={"highlights": {"num_sentences": 3}} # Grab more context for the LLM
         )
 
         if getattr(response, "results", None):
@@ -60,12 +61,12 @@ def _active_exa_hunt():
             domain = top_hit.url.split("/")[2].replace("www.", "") if getattr(top_hit, "url", None) else "unknown"
             highlights = getattr(top_hit, "highlights", []) or []
             return {
-                "source": f"Exa Neural Search ({domain})",
-                "headline": getattr(top_hit, "title", "Live geopolitical headline detected"),
-                "highlight": highlights[0] if highlights else "",
+                "source": f"Exa Predictive Intel ({domain})",
+                "headline": getattr(top_hit, "title", "Emerging geopolitical signal detected"),
+                "highlight": " ".join(highlights) if highlights else "",
             }
     except Exception as e:
-        print(f"Exa search failed, cascading to RSS: {e}")
+        print(f"Exa predictive search failed, cascading to RSS: {e}")
 
     return None
 
@@ -150,13 +151,13 @@ def ingest_and_classify_news(headline_override=None, api_key=None, headlines=Non
 
     system_prompt = f"""
     You are 'Watcher', a Geopolitical Risk Intelligence AI operating within an Energy Supply Chain Digital Twin.
-    Your task is to synthesize live news feeds with retrieved historical context and output a strict JSON payload.
+    Your task is to synthesize predictive news signals with retrieved historical context, calculate disruption severity, and output a strict JSON payload.
 
     RETRIEVED CONTEXT: 
     {retrieved_context}
 
-    LIVE NEWS FEED HEADLINE: "{latest_news}"
-    NEWS ARTICLE HIGHLIGHT: "{context_snippet}"
+    PREDICTIVE INTEL HEADLINE: "{latest_news}"
+    SIGNAL HIGHLIGHT: "{context_snippet}"
 
     Analyze the threat. You MUST map the event to one of the following exact 'trigger_event' strings if applicable:
     - "Red Sea Shipping Suspension (Houthi Threat)"
@@ -164,11 +165,13 @@ def ingest_and_classify_news(headline_override=None, api_key=None, headlines=Non
     - "OPEC+ Emergency Supply Cut"
     - "Baseline (No Disruption)"
 
-    Return ONLY valid JSON matching this schema:
-    {{"trigger_event": "String",
+    Return ONLY valid JSON matching this schema. You MUST provide your step-by-step analysis in the 'analysis_chain_of_thought' field BEFORE assigning scores.
+    {{
+      "analysis_chain_of_thought": "Step-by-step reasoning: 1) Identify the core geopolitical actor. 2) Assess the leading indicator vs historical context. 3) Determine the probability of supply chain impact.",
+      "trigger_event": "String",
       "calculated_severity": "Integer (1-10)",
       "confidence_score": "Float (0.00-1.00)",
-      "reasoning": "A 1-sentence explanation of your assessment based on the context."
+      "reasoning": "A 1-sentence summary of your final assessment."
     }}
     """
 
@@ -186,6 +189,7 @@ def ingest_and_classify_news(headline_override=None, api_key=None, headlines=Non
             parsed = json.loads(response.text)
 
             extracted_data = {
+                "analysis_chain_of_thought": parsed.get("analysis_chain_of_thought", ""),
                 "trigger_event": parsed.get("trigger_event", "Baseline (No Disruption)"),
                 "calculated_severity": int(parsed.get("calculated_severity", 1)),
                 "confidence_score": float(parsed.get("confidence_score", 0.90)),
@@ -205,4 +209,5 @@ def ingest_and_classify_news(headline_override=None, api_key=None, headlines=Non
         "calculated_severity": int(extracted_data.get("calculated_severity", 1)),
         "confidence_score": f"{extracted_data.get('confidence_score', 0.90) * 100:.1f}%",
         "reasoning": extracted_data.get("reasoning", "Fallback heuristic applied due to API unavailability."),
+        "analysis_chain_of_thought": extracted_data.get("analysis_chain_of_thought", "N/A"),
     }
