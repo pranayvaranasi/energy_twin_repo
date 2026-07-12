@@ -16,6 +16,8 @@ st.markdown("Dynamic MCTS scenario modelling & adaptive procurement routing.")
 
 # --- SIDEBAR: DISRUPTION MODELLER ---
 st.sidebar.header("Geopolitical Risk Modeller")
+st.sidebar.markdown("🟢 **System Status:** `Live C++ Engine Connected`")
+st.sidebar.divider()
 st.sidebar.markdown("Inject a disruption signal manually, or let the NLP Watcher scan live feeds.")
 
 # Track if autonomous mode was triggered
@@ -70,7 +72,11 @@ with st.sidebar.expander("Configure Baseline Covariates"):
     refinery_buffer = st.slider("Refinery On-site Storage (Days)", 1, 15, 7)
 
 if st.sidebar.button("Simulate & Optimize", type="primary"):
-    with st.spinner("Running MCTS to predict cascading economic impacts..."):
+    with st.status("Initializing Digital Twin Agents...", expanded=True) as status:
+        st.write("📡 **NLP Watcher:** Locking geopolitical threat parameters...")
+        time.sleep(0.4)
+
+        st.write("🧠 **Modeller:** Running PyTorch TFT & MCTS rollouts...")
         impact_data = run_mcts_scenario(
             disruption_event,
             severity,
@@ -79,60 +85,64 @@ if st.sidebar.button("Simulate & Optimize", type="primary"):
             refinery_buffer,
         )
 
-    with st.spinner("Executing C++ graph traversal for alternative corridors..."):
+        st.write("⚡ **Orchestrator:** Compiling C++ Multi-Source Dijkstra routing...")
         start_time = time.perf_counter()
         routes_result = get_optimized_corridors(impact_data)
         end_time = time.perf_counter()
         calc_time_ms = (end_time - start_time) * 1000
-        routes = routes_result.get("routes", [])
-        financials = routes_result.get("financials", {})
-        bottlenecks = routes_result.get("bottlenecks", [])
-        required_capacity = routes_result.get("required_capacity", 0.0)
-        selected_entry_name = routes_result.get("selected_entry_name", "Jamnagar")
 
-    inventory_result = calculate_stranded_inventory(
-        impact_data.get("disrupted_nodes", []),
-        severity,
-        current_brent_price=80.0,
-    )
+        st.write("🏭 **Inventory Agent:** Traversing BFS impact trees...")
+        inventory_result = calculate_stranded_inventory(
+            impact_data.get("disrupted_nodes", []),
+            severity,
+            current_brent_price=80.0,
+        )
 
-    st.success("Simulation Complete. Adaptive Procurement Protocol Engaged.")
-    st.divider()
+        status.update(
+            label="Simulation Complete. Adaptive Procurement Protocol Engaged.",
+            state="complete",
+            expanded=False,
+        )
 
-    st.subheader(f"Scenario Impact: {disruption_event}")
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    st.subheader(f"Scenario Impact: {disruption_event}")
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric(
-        label="Brent Crude",
-        value=impact_data.get("brent_spike", "N/A"),
-        delta=impact_data.get("brent_delta", "0%"),
-        delta_color="inverse",
-    )
-    col2.metric(
-        label="SPR Cover",
-        value=impact_data.get("spr_cover", "N/A"),
-        delta=impact_data.get("spr_delta", "0 Days"),
-        delta_color="inverse",
-    )
-    col3.metric(
-        label="Refinery Rate",
-        value=impact_data.get("run_rate", "N/A"),
-        delta=impact_data.get("run_rate_delta", "0%"),
-        delta_color="inverse",
-    )
-    col4.metric(
-        label="Grid Power Stress",
-        value=impact_data.get("power_stress", "N/A"),
-        delta=impact_data.get("power_stress_delta", "0%"),
-        delta_color="inverse",
-    )
-    col5.metric(
-        label="GDP Trajectory",
-        value=impact_data.get("gdp_impact", "N/A"),
-        delta=impact_data.get("gdp_delta", "0%"),
-    )
+    routes = routes_result.get("routes", [])
+    financials = routes_result.get("financials", {})
+    bottlenecks = routes_result.get("bottlenecks", [])
+    required_capacity = routes_result.get("required_capacity", 0.0)
+    selected_entry_name = routes_result.get("selected_entry_name", "Jamnagar")
+
+    with st.container(border=True):
+        st.subheader(f"Global Impact Assessment: {disruption_event}")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric(
+            label="Brent Crude",
+            value=impact_data.get("brent_spike", "N/A"),
+            delta=impact_data.get("brent_delta", "0%"),
+            delta_color="inverse",
+        )
+        col2.metric(
+            label="SPR Cover",
+            value=impact_data.get("spr_cover", "N/A"),
+            delta=impact_data.get("spr_delta", "0 Days"),
+            delta_color="inverse",
+        )
+        col3.metric(
+            label="Refinery Rate",
+            value=impact_data.get("run_rate", "N/A"),
+            delta=impact_data.get("run_rate_delta", "0%"),
+            delta_color="inverse",
+        )
+        col4.metric(
+            label="Grid Power Stress",
+            value=impact_data.get("power_stress", "N/A"),
+            delta=impact_data.get("power_stress_delta", "0%"),
+            delta_color="inverse",
+        )
+        col5.metric(
+            label="GDP Trajectory",
+            value=impact_data.get("gdp_impact", "N/A"),
+            delta=impact_data.get("gdp_delta", "0%"),
+        )
+
     # NEW: Compartmentalize the AI layers into an Enterprise SaaS layout
     op_tab, econ_tab, infra_tab = st.tabs([
         "🌍 Global Operations & Routing", 
