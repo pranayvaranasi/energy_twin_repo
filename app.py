@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import pandas as pd
 import plotly.express as px
+import concurrent.futures
 from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
 from simulation.pdm_agent import calculate_pdm_risk
@@ -116,34 +117,52 @@ if "simulation_run" not in st.session_state:
 
 # --- 3. THE SIMULATION ORCHESTRATION ---
 if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_width=True):
+    
+    # Track end-to-end response time
+    start_time = time.perf_counter()
+    
     with st.status("Orchestrating Digital Twin Modules...", expanded=True) as status:
         st.write("📡 **NLP Watcher:** Formulating structured risk parameters...")
-        time.sleep(0.3)
-
+        time.sleep(0.1) # Minimized sleep for faster execution
+        
         st.write("🧠 **Modeller:** Running 1,000 stochastic MCTS look-ahead simulations...")
         st.session_state.impact_data = run_mcts_scenario(
-            disruption_event,
-            severity,
-            elasticity,
-            spr_release_cap,
-            refinery_buffer,
+            disruption_event, severity, elasticity, spr_release_cap, refinery_buffer
         )
-
-        st.write("⚡ **Orchestrator:** Compiling C++ Multi-Source Dijkstra routing options...")
-        routes_result = get_optimized_corridors(st.session_state.impact_data)
+        
+        st.write("⚡ **Graph Execution:** Launching C++ Routing & BFS Agents in Parallel...")
+        
+        # UPGRADE: Palantir-style Parallel Execution Graph
+        # We run the Dijkstra Routing and the BFS Inventory Traversal simultaneously on separate threads
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            
+            # 1. Dispatch the C++ memory allocation and routing calculation
+            future_routes = executor.submit(
+                get_optimized_corridors, 
+                st.session_state.impact_data
+            )
+            
+            # 2. Dispatch the BFS inventory starvation traversal
+            future_inventory = executor.submit(
+                calculate_stranded_inventory,
+                st.session_state.impact_data.get("disrupted_nodes", []), 
+                severity, 
+                80.0
+            )
+            
+            # 3. Await resolution (The total time is now max(T_routing, T_inventory) instead of T_routing + T_inventory)
+            routes_result = future_routes.result()
+            st.session_state.inventory_result = future_inventory.result()
+            
         st.session_state.routes = routes_result.get("routes", [])
-
-        st.write("🏭 **Inventory Agent:** Generating BFS downstream deficiency paths...")
-        st.session_state.inventory_result = calculate_stranded_inventory(
-            st.session_state.impact_data.get("disrupted_nodes", []),
-            severity,
-            current_brent_price=80.0,
-        )
-
+        
+        end_time = time.perf_counter()
+        total_latency = (end_time - start_time) * 1000
+        
         status.update(
-            label="Control Tower Sync Complete. Remediation Protocols Active.",
-            state="complete",
-            expanded=False,
+            label=f"Control Tower Sync Complete in {total_latency:.0f}ms. Remediation Protocols Active.", 
+            state="complete", 
+            expanded=False
         )
         st.session_state.simulation_run = True
 
