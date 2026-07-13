@@ -165,8 +165,23 @@ if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_wi
             expanded=False
         )
         st.session_state.simulation_run = True
+        st.toast("Simulation Complete. AI Copilot is ready for queries.", icon="✅")
 
 # --- 4. MAIN LAYOUT: RE-ENGINEERED KPI OVERVIEW ---
+if not st.session_state.simulation_run:
+    # UX UPGRADE: The "Empty State" Onboarding
+    with st.container(border=True):
+        st.info("👋 **Welcome to the Energy Supply Chain Resilience Twin.**")
+        st.markdown("""
+        To begin your geopolitical risk analysis:
+        1. Navigate to the **Risk Intelligence Engine** in the sidebar.
+        2. Fetch a live intelligence signal or manually select a disruption event.
+        3. Click **Run Adaptive Simulation** to generate the digital twin environment.
+        """)
+    # Stop the script from rendering the rest of the complex, empty dashboard
+    st.stop()
+
+# If the simulation HAS run, render the dashboard:
 with st.container(border=True):
     st.markdown(f"### 📊 Control Tower Dashboard Overview — *Current Scenario: {disruption_event}*")
     kpi_1, kpi_2, kpi_3, kpi_4, kpi_5 = st.columns(5)
@@ -320,6 +335,17 @@ with econ_tab:
                     use_container_width=True,
                     hide_index=True,
                     height=380,
+                )
+                
+                # UX UPGRADE: Actionable Export to close the user journey loop
+                csv_data = spr_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Executive SPR Brief (CSV)",
+                    data=csv_data,
+                    file_name=f"SPR_Mitigation_Schedule_{severity}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    type="primary"
                 )
     else:
         st.info("No reserve draws required. National supply reserves are untouched.")
