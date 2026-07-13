@@ -1,6 +1,7 @@
 import json
 from collections import deque
 from pathlib import Path
+from simulation.config import SPR_BASE_BUFFER_DAYS, BASE_BRENT_PRICE
 
 
 def load_graph_structure():
@@ -9,7 +10,7 @@ def load_graph_structure():
         return json.load(f)
 
 
-def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=80.0):
+def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=BASE_BRENT_PRICE):
     """
     Advanced BFS Impact-Tree Traversal modeling downstream asset starvation,
     Days of Inventory on Hand (DOH) depletion curves, and Economic Exposure.
@@ -66,9 +67,7 @@ def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=
 
     # --- ADVANCED INDUSTRIAL LOGISTICS METRICS ---
 
-    # 1. Localized Days of Inventory on Hand (DOH) Depletion Modeling
-    # Calibrated against India's national 9.5-day emergency reserve cushion
-    SPR_BASE_BUFFER_DAYS = 9.5
+    # Calibrated against India's national emergency reserve cushion
     refinery_reports = []
 
     for name, metrics in impacted_refineries.items():

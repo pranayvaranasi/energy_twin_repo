@@ -3,6 +3,12 @@ import json
 import math
 from pathlib import Path
 import sys
+from simulation.config import (
+    BASE_FREIGHT_RATE_USD,
+    SAFE_WATER_WAR_RISK_PCT,
+    RED_SEA_WAR_RISK_PCT,
+    HORMUZ_WAR_RISK_PCT,
+)
 
 # Set LIB_NAME based on OS to support native Windows .dll and Linux .so compilation
 if sys.platform.startswith("win"):
@@ -116,15 +122,15 @@ def get_optimized_corridors(impact_data):
     # ---------------------------------------------------------
     
     # Base maritime economics (Worldscale equivalents)
-    base_freight_rate = 2.50 # USD/bbl
-    war_risk_premium = 0.05  # % of total hull/cargo value
+    base_freight_rate = BASE_FREIGHT_RATE_USD
+    war_risk_premium = SAFE_WATER_WAR_RISK_PCT
     
     # Adjust logistics economics based on the specific geopolitical shock
     if 6 in disrupted_ids: # Red Sea / Bab el-Mandeb disrupted
-        war_risk_premium = 1.25 # Massive insurance spike for transit
+        war_risk_premium = RED_SEA_WAR_RISK_PCT
     elif 3 in disrupted_ids: # Strait of Hormuz disrupted
         base_freight_rate *= 2.5 # Panic spot rates in the Arabian Gulf
-        war_risk_premium = 2.50
+        war_risk_premium = HORMUZ_WAR_RISK_PCT
 
     routes = []
     

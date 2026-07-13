@@ -3,6 +3,16 @@ import pandas as pd
 import numpy as np
 import torch
 import warnings
+from simulation.config import (
+    CRUDE_IMPORT_DEPENDENCY,
+    TPES_COAL_SHARE,
+    TPES_CRUDE_SHARE,
+    BASE_BRENT_PRICE,
+    SPR_BASE_BUFFER_DAYS,
+    TIER_1_DAILY_REVENUE,
+    SLA_PENALTY_MULTIPLIER,
+    EXPEDITING_COST_MULTIPLIER,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -48,13 +58,6 @@ def predict_economic_fallout(disruption_event: str, severity: float, elasticity:
     Calculates macroeconomic impact using a Computable General Equilibrium (CGE) approach,
     AND executes a Micro-Corporate Business Impact Analysis (BIA) to determine exact P&L exposure.
     """
-    # --- REAL-WORLD CGE BASELINE CONSTANTS ---
-    CRUDE_IMPORT_DEPENDENCY = 0.88      
-    TPES_COAL_SHARE = 0.6021            
-    TPES_CRUDE_SHARE = 0.2983           
-    SPR_COVER_DAYS = 9.5                
-    BASE_BRENT_PRICE = 80.0             
-
     # 1. Macro Price Projection Logic
     predicted_spike = BASE_BRENT_PRICE + (severity * 3.5)
     if "Hormuz" in disruption_event:
@@ -81,16 +84,14 @@ def predict_economic_fallout(disruption_event: str, severity: float, elasticity:
     # --- 4. NEW: CORPORATE BUSINESS IMPACT ANALYSIS (BIA) ---
     # Translates macro shocks into Hard ROI / Enterprise P&L Metrics
     
-    daily_base_revenue = 15_000_000  # $15M daily base revenue for a Tier-1 asset
     revenue_loss_pct = (base_run_rate - final_run_rate) / base_run_rate
-    
-    daily_revenue_at_risk = daily_base_revenue * revenue_loss_pct
+    daily_revenue_at_risk = TIER_1_DAILY_REVENUE * revenue_loss_pct
     
     # Contractual SLA Penalties (Triggered if utilization drops below 80%)
-    sla_penalty_exposure = (severity * 125_000) if final_run_rate < 80.0 else 0.0 
+    sla_penalty_exposure = (severity * SLA_PENALTY_MULTIPLIER) if final_run_rate < 80.0 else 0.0 
     
     # Expediting & Outsourcing Costs (Emergency spot-market logistics)
-    expediting_costs = (severity * 300_000) if "Hormuz" in disruption_event or "Red Sea" in disruption_event else 0.0
+    expediting_costs = (severity * EXPEDITING_COST_MULTIPLIER) if "Hormuz" in disruption_event or "Red Sea" in disruption_event else 0.0
 
     total_daily_var = daily_revenue_at_risk + sla_penalty_exposure + expediting_costs
 
@@ -119,12 +120,12 @@ def predict_economic_fallout(disruption_event: str, severity: float, elasticity:
         "power_stress": f"{int(power_stress_index)}/100",
         "power_stress_delta": f"+{int(stress_increase)} pts",
         "forecast_df": forecast_df,
-        "spr_cover": f"{SPR_COVER_DAYS} Days",
+        "spr_cover": f"{SPR_BASE_BUFFER_DAYS} Days",
         "spr_delta": "0 Days",
         "assumptions": {
             "import_dependency": f"{CRUDE_IMPORT_DEPENDENCY*100}%",
             "tpes_coal_buffer": f"{TPES_COAL_SHARE*100}%",
-            "spr_cover": f"{SPR_COVER_DAYS} Days"
+            "spr_cover": f"{SPR_BASE_BUFFER_DAYS} Days"
         },
         "corporate_bia": {
             "daily_revenue_loss": f"${daily_revenue_at_risk:,.0f}",
