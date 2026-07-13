@@ -9,6 +9,7 @@ from simulation.config import (
     RED_SEA_WAR_RISK_PCT,
     HORMUZ_WAR_RISK_PCT,
 )
+from simulation.data_loader import get_cached_graph_data
 
 # Set LIB_NAME based on OS to support native Windows .dll and Linux .so compilation
 if sys.platform.startswith("win"):
@@ -42,10 +43,8 @@ def _haversine(lat1, lon1, lat2, lon2):
     return 2 * R * math.asin(math.sqrt(a))
 
 def _load_dynamic_graph():
-    """Parses JSON to build the edges and physical capacity limits."""
-    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
-    with open(data_path, "r") as f:
-        graph_data = json.load(f)
+    """Parses JSON from the ultra-fast RAM cache to build physical capacity limits."""
+    graph_data = get_cached_graph_data() # <--- NO DISK I/O!
         
     node_dict = {n["id"]: n for n in graph_data["nodes"]}
     max_node_id = max(node_dict.keys())

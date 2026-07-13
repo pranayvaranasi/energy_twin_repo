@@ -2,12 +2,12 @@ import json
 from collections import deque
 from pathlib import Path
 from simulation.config import SPR_BASE_BUFFER_DAYS, BASE_BRENT_PRICE
+from simulation.data_loader import get_cached_graph_data
 
 
 def load_graph_structure():
-    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
-    with open(data_path, "r") as f:
-        return json.load(f)
+    """Retrieves supply chain graph structure from RAM cache."""
+    return get_cached_graph_data()
 
 
 def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=BASE_BRENT_PRICE):

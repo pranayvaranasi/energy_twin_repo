@@ -4,12 +4,12 @@ from pathlib import Path
 import plotly.graph_objects as go
 import streamlit as st
 import datetime
+from simulation.data_loader import get_cached_graph_data
 
-@st.cache_data
+
 def load_graph_data():
-    data_path = Path(__file__).resolve().parent.parent / "data" / "supply_nodes.json"
-    with open(data_path, "r") as f:
-        return json.load(f)
+    """Retrieves supply chain graph structure from RAM cache."""
+    return get_cached_graph_data()
 
 def _haversine(lat1, lon1, lat2, lon2):
     """Calculates geospatial distance between two points in km."""
