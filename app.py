@@ -324,6 +324,40 @@ with econ_tab:
     else:
         st.info("No reserve draws required. National supply reserves are untouched.")
 
+    st.divider()
+    st.subheader("💼 Enterprise Business Impact Analysis (BIA)")
+    st.caption("Quantifying Hard ROI and daily financial exposure derived from operations downtime and SLA penalties.")
+    
+    with st.container(border=True):
+        bia_data = st.session_state.impact_data.get("corporate_bia", {})
+        
+        bia_1, bia_2, bia_3, bia_4 = st.columns(4)
+        
+        bia_1.metric(
+            "Daily Revenue at Risk", 
+            bia_data.get("daily_revenue_loss", "$0"),
+            delta="Production Shortfall",
+            delta_color="inverse"
+        )
+        bia_2.metric(
+            "Contractual SLA Penalties", 
+            bia_data.get("sla_penalties", "$0"),
+            delta="Downstream Delivery Breaches",
+            delta_color="inverse"
+        )
+        bia_3.metric(
+            "Expediting & Spot-Market Costs", 
+            bia_data.get("expediting_costs", "$0"),
+            delta="Emergency Logistics Premium",
+            delta_color="inverse"
+        )
+        bia_4.metric(
+            "Total Daily Value at Risk (VaR)", 
+            bia_data.get("total_daily_var", "$0"),
+            delta="AI Mitigation ROI Potential",
+            delta_color="normal" # Green to show how much the AI can save
+        )
+
 with infra_tab:
     st.subheader("Infrastructure Health Monitoring Engine")
     st.caption(
