@@ -6,7 +6,6 @@ import concurrent.futures
 from simulation.map_renderer import generate_geospatial_twin
 from simulation.mcts_engine import run_mcts_scenario
 from simulation.pdm_agent import calculate_pdm_risk
-from simulation.spr_agent import generate_spr_schedule
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
 from simulation.inventory_agent import calculate_stranded_inventory
@@ -319,101 +318,75 @@ with op_tab:
                 hide_index=True
             )
 
+# TAB 2: MACROECONOMICS & POLICY (SPR TAPER SCHEDULE)
 with econ_tab:
-    st.subheader("Macroeconomic Projections & Strategic Mitigation Policy")
-    st.caption("AI-driven rationing policy modeling the depletion of India's 39M Barrel underground caverns.")
-
-    spr_df = generate_spr_schedule(severity, delay_days=14, max_spr_capacity_mbpd=spr_release_cap)
-
-    if spr_df is not None and not spr_df.empty:
-        col_chart, col_data = st.columns([2.2, 1.3])
-
-        with col_chart:
-            with st.container(border=True):
-                st.markdown("##### 📉 SPR Drawdown Trajectory")
-                spr_chart = px.area(
-                    spr_df,
-                    x="Day",
-                    y=["Supply Gap (M bpd)", "Recommended SPR Release (M bpd)"],
-                    color_discrete_sequence=["rgba(239, 68, 68, 0.15)", "rgba(0, 255, 170, 0.6)"],
-                )
-
-                spr_chart.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="right",
-                        x=1,
-                        title=None,
-                    ),
-                    margin=dict(l=0, r=0, t=40, b=0),
-                    xaxis=dict(showgrid=False, zeroline=False, title="Crisis Timeline"),
-                    yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, title="Volume (MMbpd)"),
-                    hovermode="x unified",
-                )
-
-                spr_chart.update_traces(line=dict(width=2))
-                st.plotly_chart(spr_chart, use_container_width=True)
-
-        with col_data:
-            with st.container(border=True):
-                st.markdown("##### 📋 Daily Dispatch Ledger")
-                st.dataframe(
-                    spr_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    height=380,
-                )
-                
-                # UX UPGRADE: Actionable Export to close the user journey loop
-                csv_data = spr_df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Download Executive SPR Brief (CSV)",
-                    data=csv_data,
-                    file_name=f"SPR_Mitigation_Schedule_{severity}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    type="primary"
-                )
-    else:
-        st.info("No reserve draws required. National supply reserves are untouched.")
-
-    st.divider()
-    st.subheader("💼 Enterprise Business Impact Analysis (BIA)")
-    st.caption("Quantifying Hard ROI and daily financial exposure derived from operations downtime and SLA penalties.")
+    st.subheader("🏛️ Strategic Reserve Optimisation Agent")
+    st.caption("Models optimal SPR drawdown schedules against supply gap forecasts, refinery demand curves, and replenishment window estimates.")
     
-    with st.container(border=True):
-        bia_data = st.session_state.impact_data.get("corporate_bia", {})
+    with st.spinner("Calculating non-linear SPR rationing curve and generating policy brief..."):
+        from simulation.spr_agent import optimize_spr_schedule
+        active_disruptions = st.session_state.impact_data.get("disrupted_nodes", [])
+        spr_output = optimize_spr_schedule(severity, elasticity, active_disruptions)
         
-        bia_1, bia_2, bia_3, bia_4 = st.columns(4)
+    schedule_df = spr_output["schedule_df"]
+    metrics = spr_output["metrics"]
+    decision_support = spr_output["decision_support"]
+    
+    # 1. The LLM Decision Support (Time-Pressure Output)
+    st.markdown("### 🚨 Cabinet Decision Support Brief")
+    st.info(f"**RECOMMENDATION:** {decision_support['cabinet_recommendation']}")
+    for bullet in decision_support['policy_brief']:
+        st.markdown(f"**•** {bullet}")
         
-        bia_1.metric(
-            "Daily Revenue at Risk", 
-            bia_data.get("daily_revenue_loss", "$0"),
-            delta="Production Shortfall",
-            delta_color="inverse"
-        )
-        bia_2.metric(
-            "Contractual SLA Penalties", 
-            bia_data.get("sla_penalties", "$0"),
-            delta="Downstream Delivery Breaches",
-            delta_color="inverse"
-        )
-        bia_3.metric(
-            "Expediting & Spot-Market Costs", 
-            bia_data.get("expediting_costs", "$0"),
-            delta="Emergency Logistics Premium",
-            delta_color="inverse"
-        )
-        bia_4.metric(
-            "Total Daily Value at Risk (VaR)", 
-            bia_data.get("total_daily_var", "$0"),
-            delta="AI Mitigation ROI Potential",
-            delta_color="normal" # Green to show how much the AI can save
-        )
+    st.divider()
+
+    # 2. The Data Visualization
+    col_chart, col_data = st.columns([2.2, 1.3])
+    
+    with col_chart:
+        with st.container(border=True):
+            st.markdown(f"##### 📉 {metrics['replenishment_days']}-Day Rationing Trajectory")
+            
+            # Using Plotly for enterprise aesthetics
+            import plotly.express as px
+            spr_chart = px.area(
+                schedule_df, 
+                x="Day", 
+                y=["Supply Gap (M bpd)", "SPR Release (M bpd)"],
+                color_discrete_sequence=["rgba(239, 68, 68, 0.15)", "rgba(0, 255, 170, 0.6)"]
+            )
+            spr_chart.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title=None),
+                margin=dict(l=0, r=0, t=40, b=0),
+                xaxis=dict(showgrid=False, zeroline=False, title="Crisis Timeline (Days)"),
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False, title="Volume (MMbpd)"),
+                hovermode="x unified"
+            )
+            spr_chart.update_traces(line=dict(width=2)) 
+            st.plotly_chart(spr_chart, use_container_width=True)
+            
+            # SPR Inventory Health Bar
+            st.progress(
+                metrics['final_inventory'] / 39.0, 
+                text=f"Projected Reserve at End of Window: {metrics['final_inventory']:.1f} / 39.0 M bbls"
+            )
+            
+    with col_data:
+        with st.container(border=True):
+            st.markdown("##### 📋 Daily Dispatch Ledger")
+            st.dataframe(schedule_df, use_container_width=True, hide_index=True, height=380)
+            
+            # Actionable Export
+            csv_data = schedule_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Executive SPR Brief (CSV)",
+                data=csv_data,
+                file_name=f"SPR_Mitigation_Schedule_{severity}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                type="primary"
+            )
 
 with infra_tab:
     st.subheader("Infrastructure Health Monitoring Engine")
