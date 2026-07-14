@@ -160,6 +160,7 @@ if "simulation_run" not in st.session_state:
     st.session_state.routes = []
     st.session_state.inventory_result = None
     st.session_state.custom_impact = None
+    st.session_state.procurement_matrix = []
 
 # --- 3. THE SIMULATION ORCHESTRATION ---
 if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_width=True):
@@ -358,6 +359,7 @@ with op_tab:
             procurement_output = generate_agentic_recommendations(current_target_facility, active_blockades)
             
         brief = procurement_output["brief"]
+        st.session_state.procurement_matrix = procurement_output["matrix"]
         matrix_df = pd.DataFrame(procurement_output["matrix"])
         
         # Render the Agent's cognitive text sign-off
@@ -474,49 +476,68 @@ with infra_tab:
         st.markdown(f"**Asset Health Classification:** {pdm_assessment['status']}")
         st.markdown(f"**Orchestrator Mitigation Recommendation:** {pdm_assessment['recommendation']}")
 
+# --- 6. AI LOGISTICS COPILOT & GRAPHRAG KNOWLEDGE BASE ---
 st.divider()
-st.subheader("🤖 Strategic Logistics Copilot")
-st.markdown(
-    "Query the twin's multi-agent data parameters (C++ routes, PyTorch macro trends, and BFS asset tracking) using natural language."
-)
+st.subheader("🤖 GraphRAG Logistics Copilot & Ontology")
+st.markdown("Query the twin's **Semantic Knowledge Graph** (supplier-route-risk-refinery triples) using Natural Language.")
 
+# Construct the live Knowledge Graph silently in the background
+if st.session_state.simulation_run:
+    from simulation.kg_agent import kg_engine
+    # Fallback if procurement agent hasn't run yet
+    matrix = getattr(st.session_state, 'procurement_matrix', []) 
+    if not matrix:
+        from simulation.procurement_agent import calculate_landed_economics
+        matrix = calculate_landed_economics("Jamnagar Refinery", st.session_state.impact_data.get("disrupted_nodes", []))
+    
+    live_triples = kg_engine.build_live_ontology(st.session_state.impact_data, matrix)
+
+    with st.expander("🕸️ Inspect Live Semantic Ontology (RDF Triples)", expanded=False):
+        st.caption("The AI translates raw spatial data into explicit semantic relationships (Nodes & Edges) for GraphRAG reasoning.")
+        st.dataframe(
+            pd.DataFrame(live_triples), 
+            use_container_width=True, 
+            hide_index=True
+        )
+
+# Standard Chat Interface
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hello. I have completely loaded the live C++ multi-source parameters and the BFS impact tree data. Ask me any strategic supply chain or financial deficit question.",
-        }
+        {"role": "assistant", "content": "Hello. I have fully vectorized the live Semantic Knowledge Graph. I can trace multi-hop relationships from upstream geopolitical sanctions directly to downstream refinery metallurgy. Ask me a question."}
     ]
 
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
-if prompt := st.chat_input("E.g., 'What is the daily financial deficit of our stranded assets?'"):
+if prompt := st.chat_input("E.g., 'Trace the risk contagion path for the current scenario.'"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
-
-    with st.spinner("Synthesizing metrics..."):
+    
+    with st.spinner("Traversing Knowledge Graph (GraphRAG)..."):
         prompt_lower = prompt.lower()
-        if any(w in prompt_lower for w in ["stranded", "loss", "money", "deficit", "holding"]):
-            if st.session_state.inventory_result:
-                reply = (
-                    f"The BFS graph traversal indicates that **{st.session_state.inventory_result['stranded_volume']}** is trapped. "
-                    f"This incurs a capital storage holding cost of **{st.session_state.inventory_result['daily_holding_cost']}** and introduces an operational stoppage risk exposure of "
-                    f"**{st.session_state.inventory_result['operational_stoppage_exposure']}**. Immediate mitigation via East Coast node rerouting is recommended."
-                )
+        
+        # 1. Intercept GraphRAG specific queries
+        if "trace" in prompt_lower or "contagion" in prompt_lower or "risk" in prompt_lower:
+            if st.session_state.simulation_run:
+                contagion_paths = kg_engine.execute_graphrag_query("risk_contagion")
+                if contagion_paths:
+                    reply = "**GraphRAG Multi-Hop Trace Complete:**\n\n"
+                    for path in contagion_paths:
+                        reply += f"🚨 **{path['Risk Origin']}** $\\rightarrow$ restricts $\\rightarrow$ **{path['Compromised Corridor']}** $\\rightarrow$ starving $\\rightarrow$ **{path['Downstream Impact']}**\n\n"
+                    reply += "Recommendation: Execute emergency spot procurement via alternate corridors immediately."
+                else:
+                    reply = "Knowledge Graph traversal indicates no active geopolitical risk contagion paths affecting downstream facilities."
             else:
-                reply = "Our BFS inventory tracker shows no stranded assets or financial exposure under current parameters."
-        elif "pdm" in prompt_lower or "failure" in prompt_lower or "useful life" in prompt_lower:
-            reply = (
-                f"The PdM agent indicates the **{pdm_assessment['asset']}** has a failure probability of "
-                f"**{pdm_assessment['failure_probability']}** with an anomaly score of `{pdm_assessment['lstm_anomaly_score']}`. "
-                f"Recommendation: {pdm_assessment['recommendation']}"
-            )
+                reply = "Please run the simulation first to construct the semantic ontology."
+                
+        # 2. Standard queries (Inventory / PdM)
+        elif any(w in prompt_lower for w in ["stranded", "loss", "money", "deficit", "holding"]):
+            if st.session_state.inventory_result:
+                reply = f"The BFS traversal indicates **{st.session_state.inventory_result['stranded_volume']}** is trapped. This incurs a capital storage holding cost of **{st.session_state.inventory_result['daily_holding_cost']}**. Reroute required."
+            else:
+                reply = "No stranded assets detected in the current graph state."
         else:
-            reply = (
-                f"The PyTorch forecasting layer predicts a direct GDP trend drop of **{st.session_state.impact_data.get('gdp_impact')}** "
-                f"due to supply chokepoint premiums. I recommend evaluating the automated SPR release configuration immediately."
-            )
-
+            reply = f"The PyTorch forecasting layer predicts a direct GDP trend drop of **{st.session_state.impact_data.get('gdp_impact')}**. Evaluate the SPR release schedule."
+            
         st.session_state.messages.append({"role": "assistant", "content": reply})
         st.chat_message("assistant").write(reply)
