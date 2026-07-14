@@ -82,17 +82,58 @@ if st.sidebar.button("Fetch Live Multi-Source Intelligence", type="secondary", u
 
 
 if not autonomous_triggered:
-    st.sidebar.subheader("⚙️ Manual Override Mode")
-    disruption_event = st.sidebar.selectbox(
-        "Select Event Trigger:",
-        [
-            "Baseline (No Disruption)",
-            "Red Sea Shipping Suspension (Houthi Threat)",
-            "Strait of Hormuz Partial Closure",
-            "OPEC+ Emergency Supply Cut",
+    st.sidebar.subheader("🎛️ Continuous 'What-If' Scenario Builder")
+    st.sidebar.caption("Inject multi-variable network shocks for persistent stress testing.")
+    
+    # Allow the user to stack multiple failures
+    custom_disruptions = st.sidebar.multiselect(
+        "Select Target Nodes to Disable:",
+        options=[
+            "Red Sea / Suez", 
+            "Middle East (Hormuz)", 
+            "Jamnagar Refinery", 
+            "Strait of Malacca",
+            "Delhi NCR Hub"
         ],
+        default=["Red Sea / Suez"]
     )
-    severity = st.sidebar.slider("Disruption Severity Factor", 1, 10, 5)
+    
+    severity = st.sidebar.slider("Global Contagion Severity Factor", 1, 10, 6)
+    
+    # Map the UI strings back to the new Graph IDs for the C++ engine
+    node_map = {
+        "Red Sea / Suez": 6, 
+        "Middle East (Hormuz)": 3, 
+        "Jamnagar Refinery": 4, 
+        "Strait of Malacca": 10,
+        "Delhi NCR Hub": 12
+    }
+    
+    # Dynamically build the disruption event based on the user's custom what-if scenario
+    if custom_disruptions:
+        disrupted_ids = [node_map[node] for node in custom_disruptions]
+        disruption_event = f"Custom What-If: {', '.join(custom_disruptions)}"
+        
+        # Inject custom scenario parameters into SCENARIO_BASELINE
+        from simulation.mcts_engine import SCENARIO_BASELINE
+        SCENARIO_BASELINE[disruption_event] = {
+            "base_nodes": [1, 2, 8, 9], # Safe origins
+            "disrupted_nodes": disrupted_ids,
+            "volatility": 0.50,
+            "contagion_alpha": 0.30
+        }
+        
+        # Override the default impact data before the simulation runs
+        st.session_state.custom_impact = {
+            "disrupted_nodes": disrupted_ids,
+            "calculated_severity": severity,
+            "trigger_event": disruption_event,
+            "base_nodes": [1, 2, 8, 9] # Safe origins
+        }
+    else:
+        disruption_event = "Baseline (No Disruption)"
+        severity = 1
+        st.session_state.custom_impact = None
 
 st.sidebar.divider()
 
@@ -118,6 +159,7 @@ if "simulation_run" not in st.session_state:
     }
     st.session_state.routes = []
     st.session_state.inventory_result = None
+    st.session_state.custom_impact = None
 
 # --- 3. THE SIMULATION ORCHESTRATION ---
 if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_width=True):
@@ -126,13 +168,18 @@ if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_wi
     start_time = time.perf_counter()
     
     with st.status("Orchestrating Digital Twin Modules...", expanded=True) as status:
-        st.write("📡 **NLP Watcher:** Formulating structured risk parameters...")
+        if getattr(st.session_state, "custom_impact", None) is not None:
+            st.write("🎛️ **Scenario Builder:** Injecting custom what-if parameters...")
+        else:
+            st.write("📡 **NLP Watcher:** Formulating structured risk parameters...")
         time.sleep(0.1) # Minimized sleep for faster execution
         
         st.write("🧠 **Modeller:** Running 1,000 stochastic MCTS look-ahead simulations...")
         st.session_state.impact_data = run_mcts_scenario(
             disruption_event, severity, elasticity, spr_release_cap, refinery_buffer
         )
+        if getattr(st.session_state, "custom_impact", None) is not None:
+            st.session_state.impact_data.update(st.session_state.custom_impact)
         
         st.write("⚡ **Graph Execution:** Launching C++ Routing & BFS Agents in Parallel...")
         

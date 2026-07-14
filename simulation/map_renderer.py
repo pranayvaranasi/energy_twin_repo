@@ -161,6 +161,8 @@ def generate_geospatial_twin(impact_data, active_routes, inventory_result=None):
             colors.append("#A855F7"); sizes.append(14); symbols.append("square")
         elif node["type"] == "refinery":
             colors.append("#F97316"); sizes.append(12); symbols.append("circle")
+        elif node["type"] == "distribution": # NEW: Domestic Downstream Styling
+            colors.append("#3B82F6"); sizes.append(10); symbols.append("star") 
         elif node["type"] == "maritime_corridor":
             colors.append("#38BDF8"); sizes.append(8); symbols.append("circle-open")
         else:

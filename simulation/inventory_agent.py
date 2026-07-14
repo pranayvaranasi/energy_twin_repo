@@ -48,17 +48,18 @@ def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=
             current = queue.popleft()
             current_node = node_dict[current]
 
-            # If the disruption wave cascades into a refining node
-            if current_node["type"] == "refinery":
-                refinery_name = current_node["name"]
-                ref_capacity = current_node.get("capacity_mmbpd", 1.5)
+            # If the disruption wave cascades into a refining or distribution node
+            if current_node["type"] in ("refinery", "distribution"):
+                node_name = current_node["name"]
+                node_cap = current_node.get("capacity_mmbpd", 1.5)
 
-                if refinery_name not in impacted_refineries:
-                    impacted_refineries[refinery_name] = {
-                        "capacity": ref_capacity,
+                if node_name not in impacted_refineries:
+                    impacted_refineries[node_name] = {
+                        "capacity": node_cap,
                         "deficit_contribution": 0.0,
+                        "type": current_node["type"],
                     }
-                impacted_refineries[refinery_name]["deficit_contribution"] += trapped_volume
+                impacted_refineries[node_name]["deficit_contribution"] += trapped_volume
 
             for neighbor in adj[current]:
                 if neighbor not in seen:
@@ -75,13 +76,16 @@ def calculate_stranded_inventory(disrupted_nodes, severity, current_brent_price=
 
         # Structural depletion curve: calculate how fast safety stocks deplete based on deficit severity
         depletion_rate = allocated_deficit / metrics["capacity"] if metrics["capacity"] > 0 else 0.5
-        remaining_doh = max(0.0, SPR_BASE_BUFFER_DAYS * (1.0 - (depletion_rate * (severity / 10.0))))
+        
+        # Distribution nodes have slightly lower safety buffers than refineries (e.g. 5 days vs SPR_BASE_BUFFER_DAYS)
+        base_buffer = 5.0 if metrics.get("type") == "distribution" else SPR_BASE_BUFFER_DAYS
+        remaining_doh = max(0.0, base_buffer * (1.0 - (depletion_rate * (severity / 10.0))))
 
         refinery_reports.append({
             "name": name,
             "allocated_deficit": f"{allocated_deficit:.2f} MMbpd",
             "days_of_cover": f"{remaining_doh:.1f} Days",
-            "risk_tier": "CRITICAL" if remaining_doh < 4.0 else "HIGH" if remaining_doh < 7.0 else "MODERATE",
+            "risk_tier": "CRITICAL" if remaining_doh < 3.0 else "HIGH" if remaining_doh < 5.0 else "MODERATE",
         })
 
     # 2. Capital Exposure & Holding Costs vs Stoppage Penalties

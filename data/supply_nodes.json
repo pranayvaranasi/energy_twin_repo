@@ -9,7 +9,10 @@
     {"id": 7, "name": "Visakhapatnam HPCL", "type": "refinery", "capacity_mmbpd": 1.5, "lat": 17.68, "lon": 83.21},
     {"id": 8, "name": "Russian Urals (Baltic)", "type": "port", "capacity_mmbpd": 7.0, "lat": 60.36, "lon": 28.71},
     {"id": 9, "name": "Mangalore ISPRL (SPR)", "type": "strategic_reserve", "capacity_mmbpd": 1.5, "lat": 12.91, "lon": 74.85},
-    {"id": 10, "name": "Strait of Malacca", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 1.43, "lon": 102.89}
+    {"id": 10, "name": "Strait of Malacca", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 1.43, "lon": 102.89},
+    {"id": 11, "name": "Mumbai Demand Center", "type": "distribution", "capacity_mmbpd": 0.8, "lat": 19.07, "lon": 72.87},
+    {"id": 12, "name": "Delhi NCR Hub", "type": "distribution", "capacity_mmbpd": 1.2, "lat": 28.70, "lon": 77.10},
+    {"id": 13, "name": "Bangalore Tech Hub", "type": "distribution", "capacity_mmbpd": 0.5, "lat": 12.97, "lon": 77.59}
   ],
   "edges": [
     {"source": 1, "target": 5, "type": "sea_lane"},
@@ -27,108 +30,9 @@
     {"source": 9, "target": 7, "type": "pipeline"},
     {"source": 3, "target": 10, "type": "sea_lane"},
     {"source": 10, "target": 7, "type": "sea_lane"},
-    {
-      "id": 1,
-      "name": "US Gulf Coast",
-      "type": "refinery",
-      "capacity_mmbpd": 9.3,
-      "lat": 29.76,
-      "lon": -95.36
-    },
-    {
-      "id": 2,
-      "name": "West Africa",
-      "type": "port",
-      "capacity_mmbpd": 5.1,
-      "lat": 4.05,
-      "lon": 8.5
-    },
-    {
-      "id": 3,
-      "name": "Middle East Hub",
-      "type": "hub",
-      "capacity_mmbpd": 15.0,
-      "lat": 24.45,
-      "lon": 54.37
-    },
-    {
-      "id": 4,
-      "name": "Jamnagar",
-      "type": "refinery",
-      "capacity_mmbpd": 2.3,
-      "lat": 22.33,
-      "lon": 69.95
-    },
-    {
-      "id": 5,
-      "name": "Cape of Good Hope",
-      "type": "maritime_corridor",
-      "capacity_mmbpd": 0.0,
-      "lat": -34.83,
-      "lon": 20.0
-    },
-    {
-      "id": 6,
-      "name": "Red Sea / Suez",
-      "type": "maritime_corridor",
-      "capacity_mmbpd": 0.0,
-      "lat": 27.88,
-      "lon": 34.26
-    },
-    {
-      "id": 7,
-      "name": "Visakhapatnam HPCL",
-      "type": "refinery",
-      "capacity_mmbpd": 1.5,
-      "lat": 17.68,
-      "lon": 83.21
-    }
-  ],
-  "edges": [
-    {
-      "source": 1,
-      "target": 5,
-      "type": "sea_lane"
-    },
-    {
-      "source": 1,
-      "target": 6,
-      "type": "sea_lane"
-    },
-    {
-      "source": 2,
-      "target": 5,
-      "type": "sea_lane"
-    },
-    {
-      "source": 3,
-      "target": 6,
-      "type": "sea_lane"
-    },
-    {
-      "source": 3,
-      "target": 4,
-      "type": "pipeline"
-    },
-    {
-      "source": 5,
-      "target": 4,
-      "type": "sea_lane"
-    },
-    {
-      "source": 6,
-      "target": 4,
-      "type": "sea_lane"
-    },
-    {
-      "source": 5,
-      "target": 7,
-      "type": "sea_lane"
-    },
-    {
-      "source": 6,
-      "target": 7,
-      "type": "sea_lane"
-    }
+    {"source": 4, "target": 11, "type": "terrestrial_pipeline"},
+    {"source": 4, "target": 12, "type": "terrestrial_pipeline"},
+    {"source": 7, "target": 13, "type": "terrestrial_pipeline"},
+    {"source": 7, "target": 12, "type": "terrestrial_pipeline"}
   ]
 }
