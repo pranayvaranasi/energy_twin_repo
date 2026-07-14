@@ -61,21 +61,26 @@ severity = 1
 
 st.sidebar.subheader("📡 Autonomous Agent Mode")
 st.sidebar.caption("Deploy neural threat-hunting crawlers to actively scan breaking news feeds.")
-if st.sidebar.button("Fetch Live Intelligence Signal", type="secondary", use_container_width=True):
+if st.sidebar.button("Fetch Live Multi-Source Intelligence", type="secondary", use_container_width=True):
     autonomous_triggered = True
-    with st.spinner("Executing semantic search across global news vectors..."):
+    with st.spinner("Aggregating AIS, Sanctions, News, and Market Data..."):
         time.sleep(0.8)
         signal_data = ingest_and_classify_news()
 
-    st.sidebar.warning(f"📰 **Intel Found:** {signal_data['headline']}")
-    st.sidebar.info(
-        f"**Classification:** {signal_data['trigger_event']}\n\n"
-        f"**Assessed Severity:** {signal_data['calculated_severity']}/10\n\n"
-        f"**Agent Confidence:** {signal_data['confidence_score']}"
-    )
+    st.sidebar.warning(f"🚨 **Threat Detected:** {signal_data['trigger_event']}")
+    st.sidebar.caption(f"*{signal_data['reasoning']}*")
+
+    st.sidebar.markdown("### 🌊 Disruption Risk by Corridor")
+    for corridor, risk in signal_data.get('corridors', {}).items():
+        st.sidebar.progress(risk / 100.0, text=f"{corridor}: {risk}% Risk")
+
+    st.sidebar.markdown("### 🛢️ Supply Risk by Supplier")
+    for supplier, risk in signal_data.get('suppliers', {}).items():
+        st.sidebar.progress(risk / 100.0, text=f"{supplier}: {risk}% Risk")
 
     disruption_event = signal_data['trigger_event']
     severity = signal_data['calculated_severity']
+
 
 if not autonomous_triggered:
     st.sidebar.subheader("⚙️ Manual Override Mode")
