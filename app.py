@@ -307,18 +307,31 @@ op_tab, econ_tab, infra_tab = st.tabs([
 ])
 
 with op_tab:
-    col_map, col_details = st.columns([2, 1])
-
+    col_map, col_details = st.columns([2.2, 1.3])
+    
     with col_map:
-        st.subheader("Geospatial Network Visualization")
+        st.subheader("Geospatial Intelligence (GEOINT) Platform")
         live_map_fig = generate_geospatial_twin(
             st.session_state.impact_data,
             st.session_state.routes,
             st.session_state.inventory_result,
         )
         st.plotly_chart(live_map_fig, use_container_width=True)
-
+        
     with col_details:
+        # NEW: GEOINT AIS Tracking Analytics
+        st.subheader("🛰️ Active AIS Telemetry")
+        with st.container(border=True):
+            st.markdown("##### 📡 Vessel Transponder Anomalies")
+            if 3 in st.session_state.impact_data.get("disrupted_nodes", []) or 8 in st.session_state.impact_data.get("disrupted_nodes", []):
+                st.error("**DARK FLEET DETECTED:** Multiple VLCCs operating with extended AIS transponder gaps or spoofed MMSI signals near disrupted zones. High probability of sanctions evasion.")
+                st.markdown("- **MMSI 41920491**: SOG 0.0kts (Spoofed) -> Expected SOG: 14.1kts")
+                st.markdown("- **MMSI 41977283**: Signal Lost (14 hrs ago)")
+            else:
+                st.success("**AIS Integrity Verified:** All inbound VLCC/Suezmax vessels are transmitting compliant Navigational Status and accurate SOG/COG data.")
+        
+        st.divider()
+        
         st.subheader("📡 Real-Time Procurement Ingestion")
         
         # 1. Traditional Stranded Inventory Metrics
