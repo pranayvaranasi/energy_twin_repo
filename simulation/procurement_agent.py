@@ -12,7 +12,14 @@ except ImportError:
 
 # --- LIVE REFINERY ASSAY CONFIGURATIONS ---
 REFINERY_PROFILES = {
+    "Jamnagar Refinery (Reliance)": {"target_api": 32.0, "max_sulfur": 2.5, "complexity_index": 14.0},
+    "Visakhapatnam Refinery (HPCL)": {"target_api": 35.0, "max_sulfur": 1.8, "complexity_index": 9.5},
+    "Kochi Refinery (BPCL)": {"target_api": 34.0, "max_sulfur": 2.0, "complexity_index": 10.0},
+    "Panipat Refinery (IOCL)": {"target_api": 33.0, "max_sulfur": 2.2, "complexity_index": 11.0},
+    "Paradip Refinery (IOCL)": {"target_api": 31.0, "max_sulfur": 2.4, "complexity_index": 12.0},
+    # Backward compatibility fallbacks
     "Jamnagar Refinery": {"target_api": 32.0, "max_sulfur": 2.5, "complexity_index": 14.0},
+    "Visakhapatnam HPCL": {"target_api": 35.0, "max_sulfur": 1.8, "complexity_index": 9.5},
     "Visakhapatnam Refinery": {"target_api": 35.0, "max_sulfur": 1.8, "complexity_index": 9.5}
 }
 
@@ -60,7 +67,7 @@ def calculate_landed_economics(target_refinery: str, active_disruptions: List[in
     Algorithmic Evaluation Engine (Multi-Attribute Scoring).
     Evaluates Landed Cost, Demurrage, and Assay Penalties for alternative configurations.
     """
-    refinery = REFINERY_PROFILES.get(target_refinery, REFINERY_PROFILES["Jamnagar Refinery"])
+    refinery = REFINERY_PROFILES.get(target_refinery, REFINERY_PROFILES["Jamnagar Refinery (Reliance)"])
     ranked_options = []
     
     # Simulating spot market fluctuations matching current trends (Brent ~$86.09/bbl)
@@ -126,7 +133,7 @@ def generate_agentic_recommendations(target_refinery: str, active_disruptions: L
     """
     quantitative_matrix = calculate_landed_economics(target_refinery, active_disruptions)[:4]
     
-    refinery_info = REFINERY_PROFILES.get(target_refinery, REFINERY_PROFILES["Jamnagar Refinery"])
+    refinery_info = REFINERY_PROFILES.get(target_refinery, REFINERY_PROFILES["Jamnagar Refinery (Reliance)"])
     max_sulfur = refinery_info.get("max_sulfur", 2.5)
 
     system_prompt = f"""

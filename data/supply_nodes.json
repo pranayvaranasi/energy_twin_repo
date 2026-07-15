@@ -1,55 +1,421 @@
 {
   "nodes": [
-    {"id": 1, "name": "US Gulf Coast", "type": "port", "capacity_mmbpd": 9.3, "lat": 29.76, "lon": -95.36},
-    {"id": 2, "name": "West Africa Hub", "type": "port", "capacity_mmbpd": 5.1, "lat": 4.05, "lon": 8.50},
-    {"id": 3, "name": "Middle East (Hormuz)", "type": "hub", "capacity_mmbpd": 15.0, "lat": 24.45, "lon": 54.37},
-    {"id": 4, "name": "Jamnagar Refinery", "type": "refinery", "capacity_mmbpd": 2.3, "lat": 22.33, "lon": 69.95},
-    {"id": 5, "name": "Cape of Good Hope", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": -34.83, "lon": 20.00},
-    {"id": 6, "name": "Red Sea / Suez Canal", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 27.88, "lon": 34.26},
-    {"id": 7, "name": "Visakhapatnam HPCL", "type": "refinery", "capacity_mmbpd": 1.5, "lat": 17.68, "lon": 83.21},
-    {"id": 8, "name": "Russian Urals (Baltic)", "type": "port", "capacity_mmbpd": 7.0, "lat": 60.36, "lon": 28.71},
-    {"id": 9, "name": "Mangalore ISPRL (SPR)", "type": "strategic_reserve", "capacity_mmbpd": 1.5, "lat": 12.91, "lon": 74.85},
-    {"id": 10, "name": "Strait of Malacca", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 1.43, "lon": 102.89},
-    {"id": 11, "name": "Mumbai Demand Center", "type": "distribution", "capacity_mmbpd": 0.8, "lat": 19.07, "lon": 72.87},
-    {"id": 12, "name": "Delhi NCR Hub", "type": "distribution", "capacity_mmbpd": 1.2, "lat": 28.70, "lon": 77.10},
-    {"id": 13, "name": "Bangalore Tech Hub", "type": "distribution", "capacity_mmbpd": 0.5, "lat": 12.97, "lon": 77.59},
-    {"id": 14, "name": "Sumed Pipeline (Ain Sokhna to Sidi Kerir)", "type": "pipeline", "capacity_mmbpd": 2.5, "lat": 29.59, "lon": 32.33},
-    {"id": 15, "name": "Danish & Turkish Straits", "type": "maritime_corridor", "capacity_mmbpd": 5.0, "lat": 40.72, "lon": 28.13},
-    {"id": 16, "name": "Vladivostok (Russian Far East)", "type": "port", "capacity_mmbpd": 3.2, "lat": 43.11, "lon": 131.88},
-    {"id": 17, "name": "Chennai Port (Eastern Maritime Corridor)", "type": "port", "capacity_mmbpd": 1.1, "lat": 13.08, "lon": 80.27},
-    {"id": 18, "name": "Bandar Abbas (INSTC Hub)", "type": "port", "capacity_mmbpd": 2.1, "lat": 27.18, "lon": 56.27},
-    {"id": 19, "name": "Piraeus / European Hub (IMEC Destination)", "type": "distribution", "capacity_mmbpd": 4.5, "lat": 37.94, "lon": 23.64},
-    {"id": 20, "name": "Panama Canal", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 9.14, "lon": -79.72}
+    {
+      "id": 1,
+      "name": "US Gulf Coast",
+      "type": "port",
+      "capacity_mmbpd": 9.3,
+      "lat": 29.76,
+      "lon": -95.36
+    },
+    {
+      "id": 2,
+      "name": "West Africa Hub",
+      "type": "port",
+      "capacity_mmbpd": 5.1,
+      "lat": 4.45,
+      "lon": 7.16
+    },
+    {
+      "id": 3,
+      "name": "Middle East (Hormuz)",
+      "type": "hub",
+      "capacity_mmbpd": 15.0,
+      "lat": 26.56,
+      "lon": 56.25
+    },
+    {
+      "id": 4,
+      "name": "Jamnagar Refinery (Reliance)",
+      "type": "refinery",
+      "capacity_mmbpd": 1.4,
+      "lat": 22.33,
+      "lon": 69.95
+    },
+    {
+      "id": 5,
+      "name": "Cape of Good Hope",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": -34.83,
+      "lon": 20.00
+    },
+    {
+      "id": 6,
+      "name": "Red Sea / Suez Canal",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": 27.88,
+      "lon": 34.26
+    },
+    {
+      "id": 7,
+      "name": "Visakhapatnam Refinery (HPCL)",
+      "type": "refinery",
+      "capacity_mmbpd": 0.3,
+      "lat": 17.68,
+      "lon": 83.21
+    },
+    {
+      "id": 8,
+      "name": "Russian Urals (Baltic Port)",
+      "type": "port",
+      "capacity_mmbpd": 7.0,
+      "lat": 60.33,
+      "lon": 28.60
+    },
+    {
+      "id": 9,
+      "name": "Mangalore ISPRL (SPR)",
+      "type": "strategic_reserve",
+      "capacity_mmbpd": 1.5,
+      "lat": 12.91,
+      "lon": 74.85
+    },
+    {
+      "id": 10,
+      "name": "Strait of Malacca",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": 1.43,
+      "lon": 102.89
+    },
+    {
+      "id": 11,
+      "name": "Mumbai Demand Center",
+      "type": "distribution",
+      "capacity_mmbpd": 0.8,
+      "lat": 19.07,
+      "lon": 72.87
+    },
+    {
+      "id": 12,
+      "name": "Delhi NCR Hub",
+      "type": "distribution",
+      "capacity_mmbpd": 1.2,
+      "lat": 28.70,
+      "lon": 77.10
+    },
+    {
+      "id": 13,
+      "name": "Bangalore Tech Hub",
+      "type": "distribution",
+      "capacity_mmbpd": 0.5,
+      "lat": 12.97,
+      "lon": 77.59
+    },
+    {
+      "id": 14,
+      "name": "Sumed Pipeline Bypass",
+      "type": "pipeline",
+      "capacity_mmbpd": 2.5,
+      "lat": 29.59,
+      "lon": 32.33
+    },
+    {
+      "id": 15,
+      "name": "Danish & Turkish Straits",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": 40.12,
+      "lon": 26.40
+    },
+    {
+      "id": 16,
+      "name": "Vladivostok (Russian Far East)",
+      "type": "port",
+      "capacity_mmbpd": 3.2,
+      "lat": 42.75,
+      "lon": 132.88
+    },
+    {
+      "id": 17,
+      "name": "Chennai Port",
+      "type": "port",
+      "capacity_mmbpd": 1.1,
+      "lat": 13.08,
+      "lon": 80.29
+    },
+    {
+      "id": 18,
+      "name": "Bandar Abbas (INSTC Hub)",
+      "type": "port",
+      "capacity_mmbpd": 2.1,
+      "lat": 27.18,
+      "lon": 56.27
+    },
+    {
+      "id": 19,
+      "name": "Piraeus Hub (Europe)",
+      "type": "distribution",
+      "capacity_mmbpd": 4.5,
+      "lat": 37.94,
+      "lon": 23.64
+    },
+    {
+      "id": 20,
+      "name": "Panama Canal",
+      "type": "maritime_corridor",
+      "capacity_mmbpd": 0.0,
+      "lat": 9.14,
+      "lon": -79.72
+    },
+    {
+      "id": 21,
+      "name": "Mundra Port",
+      "type": "port",
+      "capacity_mmbpd": 3.4,
+      "lat": 22.73,
+      "lon": 69.72
+    },
+    {
+      "id": 22,
+      "name": "Vadinar Port (Nayara)",
+      "type": "port",
+      "capacity_mmbpd": 2.0,
+      "lat": 22.44,
+      "lon": 69.71
+    },
+    {
+      "id": 23,
+      "name": "Kochi Refinery (BPCL)",
+      "type": "refinery",
+      "capacity_mmbpd": 0.31,
+      "lat": 9.95,
+      "lon": 76.36
+    },
+    {
+      "id": 24,
+      "name": "Panipat Refinery (IOCL)",
+      "type": "refinery",
+      "capacity_mmbpd": 0.3,
+      "lat": 29.46,
+      "lon": 76.97
+    },
+    {
+      "id": 25,
+      "name": "Paradip Port",
+      "type": "port",
+      "capacity_mmbpd": 2.5,
+      "lat": 20.26,
+      "lon": 86.67
+    },
+    {
+      "id": 26,
+      "name": "Paradip Refinery (IOCL)",
+      "type": "refinery",
+      "capacity_mmbpd": 0.3,
+      "lat": 20.28,
+      "lon": 86.68
+    },
+    {
+      "id": 27,
+      "name": "Bijwasan Terminal (Delhi)",
+      "type": "distribution",
+      "capacity_mmbpd": 1.0,
+      "lat": 28.53,
+      "lon": 77.05
+    },
+    {
+      "id": 28,
+      "name": "Manmad Terminal (BPCL)",
+      "type": "distribution",
+      "capacity_mmbpd": 0.8,
+      "lat": 20.25,
+      "lon": 74.43
+    },
+    {
+      "id": 29,
+      "name": "Kondapalli Terminal",
+      "type": "distribution",
+      "capacity_mmbpd": 0.5,
+      "lat": 16.62,
+      "lon": 80.54
+    },
+    {
+      "id": 30,
+      "name": "Visakhapatnam Port",
+      "type": "port",
+      "capacity_mmbpd": 1.8,
+      "lat": 17.69,
+      "lon": 83.28
+    }
   ],
   "edges": [
-    {"source": 1, "target": 5, "type": "sea_lane"},
-    {"source": 1, "target": 6, "type": "sea_lane"},
-    {"source": 2, "target": 5, "type": "sea_lane"},
-    {"source": 3, "target": 6, "type": "sea_lane"},
-    {"source": 3, "target": 4, "type": "sea_lane"},
-    {"source": 5, "target": 4, "type": "sea_lane"},
-    {"source": 6, "target": 4, "type": "sea_lane"},
-    {"source": 5, "target": 7, "type": "sea_lane"},
-    {"source": 6, "target": 7, "type": "sea_lane"},
-    {"source": 8, "target": 6, "type": "sea_lane"},
-    {"source": 8, "target": 5, "type": "sea_lane"},
-    {"source": 9, "target": 4, "type": "pipeline"},
-    {"source": 9, "target": 7, "type": "pipeline"},
-    {"source": 3, "target": 10, "type": "sea_lane"},
-    {"source": 10, "target": 7, "type": "sea_lane"},
-    {"source": 4, "target": 11, "type": "terrestrial_pipeline"},
-    {"source": 4, "target": 12, "type": "terrestrial_pipeline"},
-    {"source": 7, "target": 13, "type": "terrestrial_pipeline"},
-    {"source": 7, "target": 12, "type": "terrestrial_pipeline"},
-    {"source": 3, "target": 14, "type": "sea_lane"},
-    {"source": 14, "target": 19, "type": "sea_to_pipeline_to_sea"},
-    {"source": 16, "target": 10, "type": "sea_lane"},
-    {"source": 10, "target": 17, "type": "sea_lane"},
-    {"source": 8, "target": 18, "type": "terrestrial_rail"},
-    {"source": 18, "target": 4, "type": "sea_lane"},
-    {"source": 8, "target": 15, "type": "sea_lane"},
-    {"source": 15, "target": 19, "type": "sea_lane"},
-    {"source": 1, "target": 20, "type": "sea_lane"},
-    {"source": 20, "target": 16, "type": "sea_lane"}
+    {
+      "source": 1,
+      "target": 5,
+      "type": "sea_lane"
+    },
+    {
+      "source": 1,
+      "target": 6,
+      "type": "sea_lane"
+    },
+    {
+      "source": 1,
+      "target": 20,
+      "type": "sea_lane"
+    },
+    {
+      "source": 20,
+      "target": 16,
+      "type": "sea_lane"
+    },
+    {
+      "source": 2,
+      "target": 5,
+      "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 6,
+      "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 21,
+      "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 22,
+      "type": "sea_lane"
+    },
+    {
+      "source": 3,
+      "target": 30,
+      "type": "sea_lane"
+    },
+    {
+      "source": 5,
+      "target": 21,
+      "type": "sea_lane"
+    },
+    {
+      "source": 5,
+      "target": 23,
+      "type": "sea_lane"
+    },
+    {
+      "source": 6,
+      "target": 14,
+      "type": "sea_lane"
+    },
+    {
+      "source": 14,
+      "target": 19,
+      "type": "pipeline"
+    },
+    {
+      "source": 6,
+      "target": 21,
+      "type": "sea_lane"
+    },
+    {
+      "source": 6,
+      "target": 22,
+      "type": "sea_lane"
+    },
+    {
+      "source": 8,
+      "target": 15,
+      "type": "sea_lane"
+    },
+    {
+      "source": 15,
+      "target": 6,
+      "type": "sea_lane"
+    },
+    {
+      "source": 8,
+      "target": 18,
+      "type": "terrestrial_rail"
+    },
+    {
+      "source": 18,
+      "target": 21,
+      "type": "sea_lane"
+    },
+    {
+      "source": 16,
+      "target": 10,
+      "type": "sea_lane"
+    },
+    {
+      "source": 10,
+      "target": 17,
+      "type": "sea_lane"
+    },
+    {
+      "source": 10,
+      "target": 25,
+      "type": "sea_lane"
+    },
+    {
+      "source": 21,
+      "target": 4,
+      "type": "pipeline"
+    },
+    {
+      "source": 21,
+      "target": 24,
+      "type": "pipeline"
+    },
+    {
+      "source": 22,
+      "target": 4,
+      "type": "pipeline"
+    },
+    {
+      "source": 22,
+      "target": 12,
+      "type": "pipeline"
+    },
+    {
+      "source": 4,
+      "target": 11,
+      "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 4,
+      "target": 28,
+      "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 23,
+      "target": 9,
+      "type": "pipeline"
+    },
+    {
+      "source": 23,
+      "target": 13,
+      "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 30,
+      "target": 7,
+      "type": "pipeline"
+    },
+    {
+      "source": 7,
+      "target": 29,
+      "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 25,
+      "target": 26,
+      "type": "pipeline"
+    },
+    {
+      "source": 26,
+      "target": 27,
+      "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 24,
+      "target": 27,
+      "type": "terrestrial_pipeline"
+    }
   ]
 }
