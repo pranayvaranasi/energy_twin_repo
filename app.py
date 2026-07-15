@@ -3,12 +3,111 @@ import time
 import pandas as pd
 import plotly.express as px
 import concurrent.futures
-from simulation.map_renderer import generate_geospatial_twin
+import os
+from simulation.map_renderer import generate_live_ais_map
 from simulation.mcts_engine import run_mcts_scenario
 from simulation.pdm_agent import calculate_pdm_risk
 from routing.wrapper import get_optimized_corridors
 from simulation.watcher_agent import ingest_and_classify_news
 from simulation.inventory_agent import calculate_stranded_inventory
+
+# --- Real-Time AIS WebSocket Tracker ---
+import threading
+import json
+import asyncio
+import datetime
+import websockets
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class AISBackgroundTracker:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.vessels = {} # mmsi -> dict
+        self.lock = threading.Lock()
+        self.thread = None
+        self.running = False
+
+    def start(self):
+        if not self.thread or not self.thread.is_alive():
+            self.running = True
+            self.thread = threading.Thread(target=self._run_loop, daemon=True)
+            self.thread.start()
+
+    def stop(self):
+        self.running = False
+
+    def _run_loop(self):
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self._listen())
+        except Exception:
+            pass
+
+    async def _listen(self):
+        uri = "wss://stream.aisstream.io/v0/stream"
+        while self.running:
+            try:
+                async with websockets.connect(uri) as websocket:
+                    subscribe_msg = {
+                        "APIKey": self.api_key,
+                        "BoundingBoxes": [[[-15.0, 30.0], [35.0, 110.0]]],
+                        "FilterMessageTypes": ["PositionReport", "ShipStaticData"]
+                    }
+                    await websocket.send(json.dumps(subscribe_msg))
+                    
+                    async for message_json in websocket:
+                        if not self.running:
+                            break
+                        msg = json.loads(message_json)
+                        if "error" in msg:
+                            break
+                        msg_type = msg.get("MessageType")
+                        mmsi = msg.get("MetaData", {}).get("MMSI")
+                        if not mmsi:
+                            continue
+                            
+                        lat = msg.get("MetaData", {}).get("Latitude")
+                        lon = msg.get("MetaData", {}).get("Longitude")
+                        
+                        with self.lock:
+                            if mmsi not in self.vessels:
+                                self.vessels[mmsi] = {
+                                    "mmsi": mmsi,
+                                    "lat": lat,
+                                    "lon": lon,
+                                    "cog": 0.0,
+                                    "sog": 0.0,
+                                    "name": msg.get("MetaData", {}).get("ShipName", "").strip(),
+                                    "type": 0,
+                                    "last_updated": datetime.datetime.now(datetime.timezone.utc)
+                                }
+                            else:
+                                self.vessels[mmsi]["lat"] = lat
+                                self.vessels[mmsi]["lon"] = lon
+                                self.vessels[mmsi]["last_updated"] = datetime.datetime.now(datetime.timezone.utc)
+
+                            if msg_type == "PositionReport":
+                                pos = msg.get("Message", {}).get("PositionReport", {})
+                                self.vessels[mmsi]["cog"] = pos.get("Cog", 0.0)
+                                self.vessels[mmsi]["sog"] = pos.get("Sog", 0.0)
+                            elif msg_type == "ShipStaticData":
+                                static = msg.get("Message", {}).get("ShipStaticData", {})
+                                self.vessels[mmsi]["name"] = static.get("Name", "").strip()
+                                self.vessels[mmsi]["type"] = static.get("Type", 0)
+            except Exception:
+                await asyncio.sleep(5)
+
+@st.cache_resource
+def get_ais_tracker(api_key: str):
+    if not api_key:
+        return None
+    tracker = AISBackgroundTracker(api_key)
+    tracker.start()
+    return tracker
+
 
 # --- 1. PAGE CONFIGURATION & ENTERPRISE THEME INJECTION ---
 st.set_page_config(
@@ -220,6 +319,10 @@ if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_wi
         st.toast("Simulation Complete. AI Copilot is ready for queries.", icon="✅")
 
 # --- 4. MAIN LAYOUT: RE-ENGINEERED KPI OVERVIEW ---
+if st.session_state.simulation_run:
+    from streamlit_autorefresh import st_autorefresh
+    st_autorefresh(interval=5000, key="ais_live_tracker_refresh")
+
 if not st.session_state.simulation_run:
     # UX UPGRADE: The "Empty State" Onboarding
     with st.container(border=True):
@@ -310,12 +413,22 @@ op_tab, econ_tab, infra_tab = st.tabs([
 with op_tab:
     col_map, col_details = st.columns([2.2, 1.3])
     
+    # Load live vessels from tracker if API key is present
+    api_key_env = os.getenv("AISSTREAM_API_KEY")
+    live_vessels = None
+    if api_key_env:
+        tracker = get_ais_tracker(api_key_env)
+        if tracker:
+            with tracker.lock:
+                live_vessels = dict(tracker.vessels)
+                
     with col_map:
         st.subheader("Geospatial Intelligence (GEOINT) Platform")
-        live_map_fig = generate_geospatial_twin(
+        live_map_fig = generate_live_ais_map(
             st.session_state.impact_data,
             st.session_state.routes,
             st.session_state.inventory_result,
+            live_vessels=live_vessels,
         )
         st.plotly_chart(live_map_fig, use_container_width=True)
         

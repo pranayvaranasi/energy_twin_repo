@@ -10,4 +10,6 @@ exa-py>=0.1.0
 google-generativeai>=0.1.0
 fastapi>=0.100.0
 uvicorn>=0.20.0
+streamlit-autorefresh>=0.0.1
+
 

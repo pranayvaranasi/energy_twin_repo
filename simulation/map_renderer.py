@@ -1,80 +1,39 @@
-import json
 import math
 import random
-from pathlib import Path
-import plotly.graph_objects as go
-import streamlit as st
 import datetime
+import plotly.graph_objects as go
+from typing import Dict, Any, List
 from simulation.data_loader import get_cached_graph_data
 
-def load_graph_data():
-    """Retrieves supply chain graph structure from RAM cache."""
-    return get_cached_graph_data()
-
-def _haversine(lat1, lon1, lat2, lon2):
-    """Calculates geospatial distance between two points in km."""
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance in km."""
     R = 6371.0
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    a = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
     return 2 * R * math.asin(math.sqrt(a))
 
-def _calculate_bearing(lat1, lon1, lat2, lon2):
-    """GEOINT Math: Calculates the Course Over Ground (COG) for AIS telemetry."""
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    dLon = lon2 - lon1
-    y = math.sin(dLon) * math.cos(lat2)
-    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon)
-    brng = math.degrees(math.atan2(y, x))
-    return (brng + 360) % 360
+def _calculate_cog(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates Course Over Ground (COG) bearing in degrees."""
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_lambda = math.radians(lon2 - lon1)
+    y = math.sin(delta_lambda) * math.cos(phi2)
+    x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(delta_lambda)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
 
-def _resolve_route_edges(active_routes, node_dict):
-    route_edges = []
-    for route in active_routes:
-        corridor = route.get("Corridor", "").lower()
-        target_id = 7 if "visakh" in corridor else 4
-        
-        if target_id not in node_dict:
-            target_id = 4
-            
-        is_pipeline = "pipeline" in corridor or "domestic" in corridor
-        
-        if "cape of good hope" in corridor:
-            source_id = 8 if "russian" in corridor else 2
-            route_edges.extend([(source_id, 5, False), (5, target_id, False)])
-        elif "malacca" in corridor:
-            route_edges.extend([(3, 10, False), (10, target_id, False)])
-        elif "suez" in corridor or "red sea" in corridor:
-            source_id = 8 if "russian" in corridor else 1
-            route_edges.extend([(source_id, 6, False), (6, target_id, False)])
-        elif is_pipeline:
-            source_id = 9 if "spr" in corridor or "domestic" in corridor else 3
-            route_edges.extend([(source_id, target_id, True)])
-        else:
-            source = route.get("Source", "")
-            if source and "russian" in source.lower():
-                route_edges.extend([(8, 5, False), (5, target_id, False)])
-            elif source and "west africa" in source.lower():
-                route_edges.extend([(2, 5, False), (5, target_id, False)])
-            elif source and "us gulf coast" in source.lower():
-                route_edges.extend([(1, 6, False), (6, target_id, False)])
-                
-    return route_edges
-
-def generate_geospatial_twin(impact_data, active_routes, inventory_result=None):
+def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[str, Any]], inventory_result: Dict[str, Any] = None, live_vessels: Dict[str, Any] = None) -> go.Figure:
     """
-    Generates an enterprise GEOINT Plotly map.
-    Features: AIS Telemetry (MMSI, SOG, COG), Pipeline vs Sea Lane Mapping, and Dark Fleet Detection.
+    Renders an interactive Map showing live vessel positions, COG headings, 
+    SOG speed vectors, chokepoint telemetry, concentric contagion zones, and refinery starvation warnings.
+    Supports streaming real-time aisstream.io target vectors when live_vessels is populated.
     """
-    graph_data = load_graph_data()
-    node_dict = {node["id"]: node for node in graph_data["nodes"]}
+    graph_data = get_cached_graph_data()
+    node_dict = {n["id"]: n for n in graph_data["nodes"]}
     disrupted_ids = set(impact_data.get("disrupted_nodes", []))
     active_ids = set(impact_data.get("base_nodes", []))
     severity = impact_data.get("calculated_severity", 5)
     
-    route_edges = _resolve_route_edges(active_routes, node_dict)
-    for _, target_id, _ in route_edges:
-        active_ids.add(target_id)
-        
     fig = go.Figure()
 
     # --- 1. GIE: CONCENTRIC CONTAGION RADII (Spatial Econometrics) ---
@@ -84,139 +43,249 @@ def generate_geospatial_twin(impact_data, active_routes, inventory_result=None):
             fig.add_trace(go.Scattergeo(
                 lon=[node["lon"]], lat=[node["lat"]], mode="markers",
                 marker=dict(size=severity * 15, color="rgba(239, 68, 68, 0.08)", line=dict(width=1, color="rgba(239, 68, 68, 0.3)")),
-                hoverinfo="text", hovertext=f"<b>Secondary Contagion Zone</b><br>Radius: ~{severity * 150} km"
+                hoverinfo="text", hovertext=f"<b>Secondary Contagion Zone</b><br>Radius: ~{severity * 150} km",
+                showlegend=False
             ))
             fig.add_trace(go.Scattergeo(
                 lon=[node["lon"]], lat=[node["lat"]], mode="markers",
                 marker=dict(size=severity * 6, color="rgba(239, 68, 68, 0.25)", line=dict(width=2, color="rgba(239, 68, 68, 0.8)")),
-                hoverinfo="text", hovertext=f"<b>Primary Epicenter: {node['name']}</b><br>Immediate operational blackout."
+                hoverinfo="text", hovertext=f"<b>Primary Epicenter: {node['name']}</b><br>Immediate operational blackout.",
+                showlegend=False
             ))
 
-    # --- 2. INFRASTRUCTURE MAPPING: PIPELINES VS SEA LANES ---
-    for edge in graph_data["edges"]:
-        src = node_dict[edge["source"]]
-        tgt = node_dict[edge["target"]]
-        
-        # GEOINT Distinction: Terrestrial Pipelines are solid, Maritime Corridors are dashed
-        is_pipe = edge.get("type", "") in ["pipeline", "terrestrial_pipeline"]
-        line_color = "rgba(100, 116, 139, 0.4)" if is_pipe else "rgba(150, 150, 150, 0.15)"
-        line_width = 2.5 if is_pipe else 1
-        dash = "solid" if is_pipe else "dot"
+    # --- 2. BASE GRAPH CONNECTIONS & INFRASTRUCTURE ---
+    for edge in graph_data.get("edges", []):
+        src = node_dict.get(edge["source"])
+        tgt = node_dict.get(edge["target"])
+        if not src or not tgt:
+            continue
+            
+        is_pipeline = edge.get("type") in ["pipeline", "terrestrial_pipeline"]
+        line_color = "rgba(168, 85, 247, 0.4)" if is_pipeline else "rgba(100, 116, 139, 0.25)"
+        line_width = 2 if is_pipeline else 1
+        line_dash = "solid" if is_pipeline else "dot"
         
         if edge["source"] in disrupted_ids or edge["target"] in disrupted_ids:
             line_color = "rgba(239, 68, 68, 0.7)"
             line_width = 3
-            dash = "dash"
-            
+            line_dash = "dash"
+
         fig.add_trace(go.Scattergeo(
-            lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]],
-            mode="lines", line=dict(width=line_width, color=line_color, dash=dash), hoverinfo="skip"
+            lon=[src["lon"], tgt["lon"]],
+            lat=[src["lat"], tgt["lat"]],
+            mode="lines",
+            line=dict(width=line_width, color=line_color, dash=line_dash),
+            hoverinfo="skip",
+            showlegend=False
         ))
 
-    # --- 3. LIVE AIS VESSEL TRACKING & DARK FLEET DETECTION ---
-    ais_lats, ais_lons, ais_text, ais_colors = [], [], [], []
-    current_time = datetime.datetime.now(datetime.timezone.utc)
-    
-    for src_id, tgt_id, is_pipeline in route_edges:
-        if src_id in node_dict and tgt_id in node_dict:
-            src = node_dict[src_id]
-            tgt = node_dict[tgt_id]
-            
-            # Draw Neon Active Route
-            route_color = "rgba(168, 85, 247, 0.6)" if is_pipeline else "rgba(0, 255, 170, 0.4)"
-            fig.add_trace(go.Scattergeo(lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]], mode="lines", line=dict(width=4, color=route_color), hoverinfo="skip"))
-            fig.add_trace(go.Scattergeo(lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]], mode="lines", line=dict(width=1.5, color=route_color.replace("0.4", "1.0")), hoverinfo="skip"))
+    # --- 3. LIVE AIS TRACKING MARKERS & TELEMETRY TOOLTIPS ---
+    ais_lats, ais_lons, ais_tooltips, ais_colors, ais_sizes = [], [], [], [], []
+    current_utc = datetime.datetime.now(datetime.timezone.utc)
 
-            # Only spawn AIS vessels on Sea Lanes, not pipelines
-            if not is_pipeline:
-                total_dist_km = _haversine(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
-                bearing_deg = _calculate_bearing(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
-                avg_sog = random.uniform(12.5, 14.8) # Speed Over Ground in knots
+    # Always highlight active shipping corridors in neon green
+    for route in active_routes:
+        corridor_name = route.get("Corridor", "").lower()
+        src_id = 3 if "hormuz" in corridor_name else (8 if "russian" in corridor_name else 1)
+        tgt_id = 7 if "visakh" in corridor_name else 4
+        
+        if src_id in node_dict and tgt_id in node_dict:
+            src, tgt = node_dict[src_id], node_dict[tgt_id]
+            fig.add_trace(go.Scattergeo(
+                lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]],
+                mode="lines",
+                line=dict(width=2.5, color="#00FFAA"),
+                hoverinfo="skip",
+                showlegend=False
+            ))
+
+    if live_vessels:
+        # Plot real-time AIS feed targets
+        for mmsi, ship in live_vessels.items():
+            ship_type = ship.get("type", 0)
+            is_tanker = 80 <= ship_type <= 89
+            name_upper = ship.get("name", "").upper()
+            is_tanker_name = any(k in name_upper for k in ["TANKER", "VLCC", "SUEZMAX", "CRUDE", "OIL", "CARRIER", "PETRO"])
+            
+            # Filter: Show crude oil tankers only
+            if not is_tanker and not is_tanker_name:
+                continue
+
+            vessel_lat = ship["lat"]
+            vessel_lon = ship["lon"]
+            sog_knots = ship.get("sog", 0.0)
+            cog_angle = ship.get("cog", 0.0)
+            ship_name = ship.get("name", "Unknown Tanker")
+            
+            # Check for anomalies near disrupted chokepoint zones
+            is_anomaly = False
+            for dis_id in disrupted_ids:
+                if dis_id in node_dict:
+                    dis_node = node_dict[dis_id]
+                    dist_to_dis = _haversine_km(vessel_lat, vessel_lon, dis_node["lat"], dis_node["lon"])
+                    if dist_to_dis < 350:
+                        is_anomaly = True
+                        break
+                        
+            color = "#EF4444" if is_anomaly else "#00FFAA"
+            nav_status = "⚠️ Transponder Gap / Spoofing Risk" if is_anomaly else "Under Way Using Engine"
+            
+            ais_lats.append(vessel_lat)
+            ais_lons.append(vessel_lon)
+            ais_colors.append(color)
+            ais_sizes.append(10 if is_anomaly else 8)
+            
+            ais_tooltips.append(
+                f"🚢 <b>REAL AIS TARGET (LIVE)</b><br>"
+                f"<b>Name:</b> {ship_name}<br>"
+                f"<b>MMSI:</b> {mmsi}<br>"
+                f"<b>Status:</b> {nav_status}<br>"
+                f"<b>SOG (Speed):</b> {sog_knots} kts | <b>COG (Course):</b> {cog_angle:.0f}°<br>"
+                f"<b>Lat/Lon:</b> {vessel_lat:.4f}, {vessel_lon:.4f}<br>"
+                f"<b>Last Ping:</b> {ship.get('last_updated', current_utc).strftime('%H:%M:%S')} UTC"
+            )
+    else:
+        # Fallback: Interpolate simulated tankers along active sea lanes
+        for route in active_routes:
+            corridor_name = route.get("Corridor", "").lower()
+            src_id = 3 if "hormuz" in corridor_name else (8 if "russian" in corridor_name else 1)
+            tgt_id = 7 if "visakh" in corridor_name else 4
+            
+            if src_id in node_dict and tgt_id in node_dict:
+                src, tgt = node_dict[src_id], node_dict[tgt_id]
+                total_dist = _haversine_km(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
+                cog_angle = _calculate_cog(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
                 
-                for fraction in [0.20, 0.55, 0.85]:
-                    ship_lat = src["lat"] + (tgt["lat"] - src["lat"]) * fraction
-                    ship_lon = src["lon"] + (tgt["lon"] - src["lon"]) * fraction
+                # Simulate live vessel telemetry along the corridor fraction
+                for frac in [0.15, 0.42, 0.78]:
+                    vessel_lat = src["lat"] + (tgt["lat"] - src["lat"]) * frac + random.uniform(-0.3, 0.3)
+                    vessel_lon = src["lon"] + (tgt["lon"] - src["lon"]) * frac + random.uniform(-0.3, 0.3)
                     
-                    remaining_dist_km = total_dist_km * (1.0 - fraction)
-                    eta = current_time + datetime.timedelta(hours=remaining_dist_km / (avg_sog * 1.852))
-                    
-                    # Generate realistic AIS Metadata
+                    rem_dist = total_dist * (1.0 - frac)
+                    sog_knots = round(random.uniform(12.2, 14.8), 1)
+                    hours_to_arrival = rem_dist / (sog_knots * 1.852)
+                    eta_utc = current_utc + datetime.timedelta(hours=hours_to_arrival)
                     mmsi = f"419{random.randint(100000, 999999)}"
                     
-                    # Dark Fleet / Sanction Evasion Logic (if originating from high-risk nodes like Russia/Hormuz)
-                    is_dark_fleet = src_id in [3, 8] and random.random() > 0.6
-                    marker_color = "#F59E0B" if is_dark_fleet else "#00FFAA"
-                    status = "<span style='color:#F59E0B;'>⚠️ AIS Spoofing / Transponder Gap</span>" if is_dark_fleet else "Underway Using Engine"
+                    is_anomaly = src_id in disrupted_ids or tgt_id in disrupted_ids
+                    color = "#EF4444" if is_anomaly else "#00FFAA"
+                    nav_status = "⚠️ Transponder Gap / Spoofing Risk" if is_anomaly else "Under Way Using Engine"
+
+                    ais_lats.append(vessel_lat)
+                    ais_lons.append(vessel_lon)
+                    ais_colors.append(color)
+                    ais_sizes.append(10 if is_anomaly else 8)
                     
-                    ais_lats.append(ship_lat)
-                    ais_lons.append(ship_lon)
-                    ais_colors.append(marker_color)
-                    ais_text.append(
-                        f"🚢 <b>VLCC Target (MMSI: {mmsi})</b><br>"
-                        f"<b>SOG:</b> {avg_sog:.1f} kts | <b>COG:</b> {bearing_deg:.0f}°<br>"
-                        f"<b>Nav Status:</b> {status}<br>"
-                        f"<b>Destination:</b> {tgt['name']}<br>"
-                        f"<b>ETA (UTC):</b> {eta.strftime('%Y-%m-%d %H:%M')}"
+                    ais_tooltips.append(
+                        f"🚢 <b>LIVE AIS TARGET (SIMULATED)</b><br>"
+                        f"<b>MMSI:</b> {mmsi}<br>"
+                        f"<b>Status:</b> {nav_status}<br>"
+                        f"<b>SOG (Speed):</b> {sog_knots} kts | <b>COG (Course):</b> {cog_angle:.0f}°<br>"
+                        f"<b>Bound For:</b> {tgt['name']}<br>"
+                        f"<b>Est. Distance:</b> {rem_dist:,.0f} km<br>"
+                        f"<b>UTC ETA:</b> {eta_utc.strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
+    # Render Live Vessel Plot Layer
     if ais_lats:
         fig.add_trace(go.Scattergeo(
-            lon=ais_lons, lat=ais_lats, mode="markers",
-            marker=dict(size=8, color=ais_colors, symbol="triangle-up", line=dict(width=1, color="black")),
-            hoverinfo="text", hovertext=ais_text
+            lon=ais_lons, lat=ais_lats,
+            mode="markers",
+            marker=dict(
+                size=ais_sizes,
+                color=ais_colors,
+                symbol="triangle-up",
+                line=dict(width=1, color="#0A0E17")
+            ),
+            hoverinfo="text",
+            hovertext=ais_tooltips,
+            name="Live AIS Traffic"
         ))
 
-    # --- 4. ASSET HEALTH & PORT MAPPING ---
-    lats, lons, texts, colors, sizes, symbols = [], [], [], [], [], []
+    # --- 4. PORTS, REFINERIES & TERMINAL NODES ---
+    node_lats, node_lons, node_texts, node_colors, node_symbols, node_sizes = [], [], [], [], [], []
     starving_refineries = inventory_result.get("affected_dependents", []) if inventory_result else []
+    
+    for route in active_routes:
+        corridor_name = route.get("Corridor", "").lower()
+        src_id = 3 if "hormuz" in corridor_name else (8 if "russian" in corridor_name else 1)
+        tgt_id = 7 if "visakh" in corridor_name else 4
+        active_ids.add(src_id)
+        active_ids.add(tgt_id)
 
     for node_id, node in node_dict.items():
-        lats.append(node["lat"])
-        lons.append(node["lon"])
-        node_type = node["type"].replace("_", " ").title()
-        base_text = f"<b>{node['name']}</b> ({node_type})<br>Max Cap: {node.get('capacity_mmbpd', 0)} MMbpd"
+        node_lats.append(node["lat"])
+        node_lons.append(node["lon"])
         
-        if node["type"] == "strategic_reserve":
-            colors.append("#A855F7"); sizes.append(14); symbols.append("square")
-        elif node["type"] == "refinery":
-            colors.append("#F97316"); sizes.append(12); symbols.append("circle")
-        elif node["type"] == "distribution":
-            colors.append("#3B82F6"); sizes.append(10); symbols.append("star") 
-        elif node["type"] == "maritime_corridor":
-            colors.append("#38BDF8"); sizes.append(8); symbols.append("circle-open")
-        elif node["type"] == "port":
-            colors.append("dodgerblue"); sizes.append(12); symbols.append("hexagon") # Port distinct mapping
-        else:
-            colors.append("gray"); sizes.append(10); symbols.append("circle")
-
-        if node_id in active_ids:
-            colors[-1] = "#00FFAA"; sizes[-1] = max(sizes[-1], 16)
-            
+        status_label = "🚨 DISRUPTED" if node_id in disrupted_ids else "🟢 OPERATIONAL"
+        node_type = node["type"].replace("_", " ").title()
+        base_text = f"<b>{node['name']}</b> ({node_type})<br>Status: {status_label}"
+        
+        size = 11
         if node_id in disrupted_ids:
-            colors[-1] = "#EF4444"; sizes[-1] = 22; symbols[-1] = "x-open"
+            color = "#EF4444"
+            symbol = "x"
+            size = 18
             base_text = f"🚨 <b>OFFLINE: {node['name']}</b><br>Severe Geopolitical Disruption"
-
-        if node["name"] in starving_refineries:
-            colors[-1] = "#FFD166"; sizes[-1] = 22; symbols[-1] = "diamond"
+        elif node["name"] in starving_refineries:
+            color = "#FFD166"
+            symbol = "diamond"
+            size = 18
             base_text = f"⚠️ <b>STARVATION RISK: {node['name']}</b><br>Downstream Supply Deficit Detected!"
+        elif node["type"] == "refinery":
+            color = "#F97316"
+            symbol = "circle"
+        elif node["type"] == "strategic_reserve":
+            color = "#A855F7"
+            symbol = "square"
+            size = 13
+        elif node["type"] == "port":
+            color = "#38BDF8"
+            symbol = "hexagon"
+            size = 13
+        else:
+            color = "#3B82F6"
+            symbol = "star"
 
-        texts.append(base_text)
+        if node_id in active_ids and node_id not in disrupted_ids:
+            color = "#00FFAA"
+            size = max(size, 15)
+            
+        node_colors.append(color)
+        node_symbols.append(symbol)
+        node_sizes.append(size)
+        node_texts.append(base_text)
 
     fig.add_trace(go.Scattergeo(
-        lon=lons, lat=lats, hovertext=texts, mode="markers",
-        marker=dict(size=sizes, color=colors, symbol=symbols, line=dict(width=1.5, color="#111827"))
+        lon=node_lons, lat=node_lats,
+        mode="markers",
+        marker=dict(size=node_sizes, color=node_colors, symbol=node_symbols, line=dict(width=1.5, color="#FFFFFF")),
+        hoverinfo="text",
+        hovertext=node_texts,
+        showlegend=False
     ))
 
-    # --- 5. ENTERPRISE UI LAYOUT ---
+    # Dark Mode GEOINT Dashboard Map Layout
     fig.update_layout(
-        title_text="Live GEOINT Platform: AIS Telemetry & Network Infrastructure", showlegend=False,
+        title=dict(text="🛰️ Live AIS Maritime Vector Tracking & Digital Twin Network", font=dict(color="#E5E7EB", size=16)),
+        showlegend=True,
         geo=dict(
-            projection_type="natural earth", showland=True,
-            landcolor="rgb(30, 30, 30)", countrycolor="rgb(75, 85, 99)", coastlinecolor="rgb(75, 85, 99)",
-            showocean=True, oceancolor="rgb(10, 14, 23)", bgcolor="rgba(0,0,0,0)",
-            lataxis=dict(range=[-40, 65]), lonaxis=dict(range=[-110, 120])
+            projection_type="natural earth",
+            showland=True, landcolor="#1E293B",
+            showocean=True, oceancolor="#0B0F19",
+            showcountries=True, countrycolor="#334155",
+            showcoastlines=True, coastlinecolor="#475569",
+            bgcolor="rgba(0,0,0,0)",
+            lataxis=dict(range=[-35, 65]),
+            lonaxis=dict(range=[-100, 125])
         ),
-        paper_bgcolor="#0A0E17", plot_bgcolor="#0A0E17", font=dict(color="#E5E7EB"),
-        margin={"r": 0, "t": 40, "l": 0, "b": 0}
+        paper_bgcolor="#0A0E17",
+        plot_bgcolor="#0A0E17",
+        font=dict(color="#E5E7EB"),
+        margin=dict(r=0, t=40, l=0, b=0),
+        height=520
     )
     return fig
+
+# Compatibility wrapper for legacy code importing the old name
+generate_geospatial_twin = generate_live_ais_map
