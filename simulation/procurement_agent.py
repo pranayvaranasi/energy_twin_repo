@@ -25,11 +25,34 @@ CRUDE_MARKET_TICKER = {
     "Maya Heavy": {"base_price": 68.40, "api": 22.0, "sulfur": 3.4, "supplier": "PEMEX"}
 }
 
+# --- REAL-TIME MARKET INGESTION DATA DICTIONARY ---
 CORRIDOR_LOGISTICS_FEED = {
-    "Suez Canal Direct": {"freight_vlcc": 2.20, "tanker_availability": "Low (Chokepoint Constraint)", "port_congestion_days": 1.5},
-    "Cape of Good Hope Bypass": {"freight_vlcc": 4.10, "tanker_availability": "High (Open Water Fleet)", "port_congestion_days": 0.0},
-    "Strait of Malacca": {"freight_vlcc": 2.50, "tanker_availability": "Moderate", "port_congestion_days": 4.2},
-    "Cross-Country Domestic Pipeline": {"freight_vlcc": 0.85, "tanker_availability": "N/A", "port_congestion_days": 0.5}
+    "Suez Canal Direct": {
+        "freight_vlcc": 2.20, "tanker_availability": "Low", "port_congestion_days": 1.5, "transit_days": 14, "mode": "sea_lane"
+    },
+    "Cape of Good Hope Bypass": {
+        "freight_vlcc": 4.10, "tanker_availability": "High", "port_congestion_days": 0.0, "transit_days": 35, "mode": "sea_lane"
+    },
+    "Sumed Pipeline Bypass (Egypt)": {
+        "freight_vlcc": 1.85, "tanker_availability": "Moderate", "port_congestion_days": 3.5, "transit_days": 16, "mode": "multi_modal",
+        "trans_shipment_penalty": 0.45 # Cost of loading/unloading at Ain Sokhna and Sidi Kerir
+    },
+    "Eastern Maritime Corridor (Vladivostok to Chennai)": {
+        "freight_vlcc": 1.70, "tanker_availability": "High", "port_congestion_days": 1.0, "transit_days": 24, "mode": "sea_lane",
+        "strategic_advantage": "Bypasses European Sanction Zones"
+    },
+    "INSTC (Russia to India via Bandar Abbas)": {
+        "freight_vlcc": 1.40, "tanker_availability": "N/A (Rail/Ship)", "port_congestion_days": 4.0, "transit_days": 21, "mode": "multi_modal",
+        "strategic_advantage": "30% cheaper and 40% shorter than traditional Suez route"
+    },
+    "IMEC (India to Europe via UAE/Saudi Rail)": {
+        "freight_vlcc": 1.95, "tanker_availability": "N/A (Ship/Rail)", "port_congestion_days": 2.5, "transit_days": 18, "mode": "multi_modal",
+        "strategic_advantage": "Bypasses Strait of Bab-el-Mandeb"
+    },
+    "Panama Canal Transit": {
+        "freight_vlcc": 2.80, "tanker_availability": "Moderate", "port_congestion_days": 5.0, "transit_days": 22, "mode": "sea_lane",
+        "trans_shipment_penalty": 0.60 # Draft restrictions often require lightering
+    }
 }
 
 def calculate_landed_economics(target_refinery: str, active_disruptions: List[int]) -> List[Dict[str, Any]]:
@@ -56,15 +79,23 @@ def calculate_landed_economics(target_refinery: str, active_disruptions: List[in
             if grade["sulfur"] > refinery["max_sulfur"] + 0.5 and refinery["complexity_index"] < 10:
                 continue
 
-            # 2. Freight & Congestion Cost Calculation
+            # 2. Freight, Congestion, and Multi-Modal Cost Calculation
             base_freight = logistics["freight_vlcc"] * spot_premium_multiplier
-            demurrage_cost = logistics["port_congestion_days"] * 0.35 # $350k/day prorated per barrel
+            demurrage_cost = logistics["port_congestion_days"] * 0.35 
             
-            # Apply chokepoint blockades from graph state
+            # Apply Multi-Modal Trans-Shipment Penalties (e.g., pipeline pumping fees or rail transfer costs)
+            trans_shipment_fee = logistics.get("trans_shipment_penalty", 0.0)
+            base_freight += trans_shipment_fee
+            
+            # Apply chokepoint blockades from the graph state
             if corridor_name == "Suez Canal Direct" and 6 in active_disruptions:
                 base_freight += 12.00 # War risk premium insurance hike
             if corridor_name == "Strait of Hormuz" and 3 in active_disruptions:
                 base_freight += 25.00 # Severe blockage exclusion penalty
+
+            # If IMEC or Sumed is used while the Red Sea is blocked, they become highly competitive
+            if corridor_name in ["IMEC (India to Europe via UAE/Saudi Rail)", "Sumed Pipeline Bypass (Egypt)"] and 6 in active_disruptions:
+                base_freight -= 1.50 # Economic incentive for using resilient alternative corridors
 
             # 3. Final Invoiced Landed Cost Estimation
             landed_cost_per_bbl = grade["base_price"] + base_freight + demurrage_cost + compatibility_penalty

@@ -5,14 +5,21 @@
     {"id": 3, "name": "Middle East (Hormuz)", "type": "hub", "capacity_mmbpd": 15.0, "lat": 24.45, "lon": 54.37},
     {"id": 4, "name": "Jamnagar Refinery", "type": "refinery", "capacity_mmbpd": 2.3, "lat": 22.33, "lon": 69.95},
     {"id": 5, "name": "Cape of Good Hope", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": -34.83, "lon": 20.00},
-    {"id": 6, "name": "Red Sea / Suez", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 27.88, "lon": 34.26},
+    {"id": 6, "name": "Red Sea / Suez Canal", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 27.88, "lon": 34.26},
     {"id": 7, "name": "Visakhapatnam HPCL", "type": "refinery", "capacity_mmbpd": 1.5, "lat": 17.68, "lon": 83.21},
     {"id": 8, "name": "Russian Urals (Baltic)", "type": "port", "capacity_mmbpd": 7.0, "lat": 60.36, "lon": 28.71},
     {"id": 9, "name": "Mangalore ISPRL (SPR)", "type": "strategic_reserve", "capacity_mmbpd": 1.5, "lat": 12.91, "lon": 74.85},
     {"id": 10, "name": "Strait of Malacca", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 1.43, "lon": 102.89},
     {"id": 11, "name": "Mumbai Demand Center", "type": "distribution", "capacity_mmbpd": 0.8, "lat": 19.07, "lon": 72.87},
     {"id": 12, "name": "Delhi NCR Hub", "type": "distribution", "capacity_mmbpd": 1.2, "lat": 28.70, "lon": 77.10},
-    {"id": 13, "name": "Bangalore Tech Hub", "type": "distribution", "capacity_mmbpd": 0.5, "lat": 12.97, "lon": 77.59}
+    {"id": 13, "name": "Bangalore Tech Hub", "type": "distribution", "capacity_mmbpd": 0.5, "lat": 12.97, "lon": 77.59},
+    {"id": 14, "name": "Sumed Pipeline (Ain Sokhna to Sidi Kerir)", "type": "pipeline", "capacity_mmbpd": 2.5, "lat": 29.59, "lon": 32.33},
+    {"id": 15, "name": "Danish & Turkish Straits", "type": "maritime_corridor", "capacity_mmbpd": 5.0, "lat": 40.72, "lon": 28.13},
+    {"id": 16, "name": "Vladivostok (Russian Far East)", "type": "port", "capacity_mmbpd": 3.2, "lat": 43.11, "lon": 131.88},
+    {"id": 17, "name": "Chennai Port (Eastern Maritime Corridor)", "type": "port", "capacity_mmbpd": 1.1, "lat": 13.08, "lon": 80.27},
+    {"id": 18, "name": "Bandar Abbas (INSTC Hub)", "type": "port", "capacity_mmbpd": 2.1, "lat": 27.18, "lon": 56.27},
+    {"id": 19, "name": "Piraeus / European Hub (IMEC Destination)", "type": "distribution", "capacity_mmbpd": 4.5, "lat": 37.94, "lon": 23.64},
+    {"id": 20, "name": "Panama Canal", "type": "maritime_corridor", "capacity_mmbpd": 0.0, "lat": 9.14, "lon": -79.72}
   ],
   "edges": [
     {"source": 1, "target": 5, "type": "sea_lane"},
@@ -33,6 +40,16 @@
     {"source": 4, "target": 11, "type": "terrestrial_pipeline"},
     {"source": 4, "target": 12, "type": "terrestrial_pipeline"},
     {"source": 7, "target": 13, "type": "terrestrial_pipeline"},
-    {"source": 7, "target": 12, "type": "terrestrial_pipeline"}
+    {"source": 7, "target": 12, "type": "terrestrial_pipeline"},
+    {"source": 3, "target": 14, "type": "sea_lane"},
+    {"source": 14, "target": 19, "type": "sea_to_pipeline_to_sea"},
+    {"source": 16, "target": 10, "type": "sea_lane"},
+    {"source": 10, "target": 17, "type": "sea_lane"},
+    {"source": 8, "target": 18, "type": "terrestrial_rail"},
+    {"source": 18, "target": 4, "type": "sea_lane"},
+    {"source": 8, "target": 15, "type": "sea_lane"},
+    {"source": 15, "target": 19, "type": "sea_lane"},
+    {"source": 1, "target": 20, "type": "sea_lane"},
+    {"source": 20, "target": 16, "type": "sea_lane"}
   ]
 }
