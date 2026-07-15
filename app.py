@@ -500,6 +500,61 @@ if st.session_state.simulation_run:
             hide_index=True
         )
 
+    with st.expander("🗄️ Cypher GraphDB Ingest Export (Neo4j / FalkorDB / Memgraph)", expanded=False):
+        st.caption("Generate and export production-grade Cypher queries to transition from NetworkX to a property graph database.")
+        
+        # Generate Cypher Ingest Script
+        cypher_script = kg_engine.generate_cypher_queries(st.session_state.impact_data)
+        st.code(cypher_script, language="cypher")
+        
+        # Download button
+        st.download_button(
+            label="💾 Download Cypher Ingest Script",
+            data=cypher_script,
+            file_name="energy_twin_ontology.cypher",
+            mime="text/plain",
+            use_container_width=True
+        )
+        
+        st.divider()
+        st.markdown("### 🔍 GraphRAG Traversal Queries (Data Extraction)")
+        st.caption("Execute these queries in your Graph Database to trace bottlenecks and run agentic sourcing.")
+        
+        # Dynamic query generation based on current scenario
+        target_refinery = st.session_state.get("selected_entry_name", "Jamnagar Refinery")
+        disrupted_ids = st.session_state.impact_data.get("disrupted_nodes", [])
+        
+        active_risk = "Iranian Blockade Risk"
+        if 6 in disrupted_ids:
+            active_risk = "Houthi Maritime Threat"
+        elif 3 in disrupted_ids:
+            active_risk = "Iranian Blockade Risk"
+            
+        st.markdown("**Query A: Trace the Risk Contagion Path**")
+        st.caption("Find all downstream Indian Refineries actively starved by the active geopolitical risk.")
+        query_a = f"""// Trace Downstream Impact from Geopolitical Risk
+MATCH contagion_path = (risk:Risk {{name: "{active_risk}"}})<-[:IS_EXPOSED_TO]-(corridor:Corridor)-[:FEEDS_INTO]->(refinery:Refinery)
+
+RETURN risk.name AS Risk_Origin, 
+       corridor.name AS Compromised_Corridor, 
+       refinery.name AS Downstream_Impact"""
+        st.code(query_a, language="cypher")
+        
+        st.markdown("**Query B: Agentic Procurement Routing**")
+        st.caption(f"Find alternative crude grades that bypass the blocked corridor AND are metallurgically compatible with {target_refinery}.")
+        query_b = f"""// Query B: Agentic Sourcing Optimizer
+MATCH (refinery:Refinery {{name: "{target_refinery}"}})
+MATCH (grade:CrudeGrade)-[:METALLURGICALLY_COMPATIBLE_WITH]->(refinery)
+MATCH (grade)-[:TRANSITS_THROUGH]->(safe_corridor:Corridor)
+
+// Exclude any corridors exposed to the active risk
+WHERE NOT (safe_corridor)-[:IS_EXPOSED_TO]->(:Risk {{name: "{active_risk}"}})
+
+RETURN grade.name AS Viable_Alternative, 
+       safe_corridor.name AS Safe_Route"""
+        st.code(query_b, language="cypher")
+
+
 # Standard Chat Interface
 if "messages" not in st.session_state:
     st.session_state.messages = [
