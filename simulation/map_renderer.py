@@ -22,44 +22,91 @@ def _calculate_cog(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(delta_lambda)
     return (math.degrees(math.atan2(y, x)) + 360) % 360
 
+def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set) -> List[tuple]:
+    """Maps logical procurement directives to explicit multi-hop geospatial graph edges."""
+    route_edges = []
+    is_baseline = len(disrupted_ids) == 0
+    
+    if is_baseline:
+        # BASELINE STATE: Show all normal, uninterrupted import routes to India
+        # 1. Middle East to Indian Ports
+        route_edges.extend([(3, 21), (3, 22), (3, 30)])
+        # 2. Ports to Domestic Refineries via Pipeline
+        route_edges.extend([(21, 4), (22, 4), (30, 7), (21, 24)])
+        # 3. Russia to India via Suez Canal
+        route_edges.extend([(8, 15), (15, 6), (6, 21)])
+        # 4. US Gulf Coast to India via Suez Canal
+        route_edges.extend([(1, 6), (6, 22)])
+        return list(set(route_edges))
+        
+    # DISRUPTED STATE: Trace explicit paths based on active agentic routes
+    for route in active_routes:
+        corridor = route.get("Corridor", "").lower()
+        
+        # Primary Cape of Good Hope Bypass
+        if "cape of good hope" in corridor:
+            route_edges.extend([(1, 5), (2, 5), (8, 5), (5, 21), (21, 4)])
+        
+        # Primary Suez Routing
+        elif "suez" in corridor and 6 not in disrupted_ids:
+            route_edges.extend([(1, 6), (8, 15), (15, 6), (6, 21), (21, 4)])
+            
+        # Alternative: Eastern Maritime Corridor
+        elif "eastern maritime" in corridor or "vladivostok" in corridor:
+            route_edges.extend([(16, 10), (10, 17), (10, 25), (25, 26)])
+            
+        # Alternative: INSTC Rail/Sea Corridor
+        elif "instc" in corridor or "bandar abbas" in corridor:
+            route_edges.extend([(8, 18), (18, 21), (21, 4)])
+            
+        # Alternative: Sumed Pipeline
+        elif "sumed" in corridor:
+            route_edges.extend([(3, 6), (6, 14), (14, 19)])
+        
+        # Spot Market Hedge (USGC)
+        if "usgc" in corridor or "us gulf" in corridor:
+            if 6 not in disrupted_ids:
+                route_edges.extend([(1, 6), (6, 21), (21, 4)])
+            else:
+                route_edges.extend([(1, 5), (5, 21), (21, 4)])
+                
+    # Always maintain Middle East fallback if Hormuz (3) is not blocked
+    if 3 not in disrupted_ids:
+        route_edges.extend([(3, 21), (3, 22), (21, 4), (22, 4)])
+        
+    return list(set(route_edges))
+
 def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[str, Any]], inventory_result: Dict[str, Any] = None, live_vessels: Dict[str, Any] = None) -> go.Figure:
-    """
-    Renders an interactive Map showing live vessel positions, COG headings, 
-    SOG speed vectors, chokepoint telemetry, concentric contagion zones, and refinery starvation warnings.
-    Supports streaming real-time aisstream.io target vectors when live_vessels is populated.
-    """
+    """Renders interactive GEOINT Map with multi-hop route resolution."""
     graph_data = get_cached_graph_data()
     node_dict = {n["id"]: n for n in graph_data["nodes"]}
     disrupted_ids = set(impact_data.get("disrupted_nodes", []))
     active_ids = set(impact_data.get("base_nodes", []))
     severity = impact_data.get("calculated_severity", 5)
     
+    # 1. Resolve logical routes into explicit physical edges
+    resolved_edges = _resolve_route_edges(active_routes, disrupted_ids)
+    
     fig = go.Figure()
 
-    # --- 1. GIE: CONCENTRIC CONTAGION RADII (Spatial Econometrics) ---
+    # --- 1. GIE: CONCENTRIC CONTAGION RADII ---
     for node_id in disrupted_ids:
         if node_id in node_dict:
             node = node_dict[node_id]
-            fig.add_trace(go.Scattergeo(
-                lon=[node["lon"]], lat=[node["lat"]], mode="markers",
+            fig.add_trace(go.Scattergeo(lon=[node["lon"]], lat=[node["lat"]], mode="markers",
                 marker=dict(size=severity * 15, color="rgba(239, 68, 68, 0.08)", line=dict(width=1, color="rgba(239, 68, 68, 0.3)")),
-                hoverinfo="text", hovertext=f"<b>Secondary Contagion Zone</b><br>Radius: ~{severity * 150} km",
-                showlegend=False
+                hoverinfo="text", hovertext=f"<b>Secondary Contagion Zone</b><br>Radius: ~{severity * 150} km", showlegend=False
             ))
-            fig.add_trace(go.Scattergeo(
-                lon=[node["lon"]], lat=[node["lat"]], mode="markers",
+            fig.add_trace(go.Scattergeo(lon=[node["lon"]], lat=[node["lat"]], mode="markers",
                 marker=dict(size=severity * 6, color="rgba(239, 68, 68, 0.25)", line=dict(width=2, color="rgba(239, 68, 68, 0.8)")),
-                hoverinfo="text", hovertext=f"<b>Primary Epicenter: {node['name']}</b><br>Immediate operational blackout.",
-                showlegend=False
+                hoverinfo="text", hovertext=f"<b>Primary Epicenter: {node['name']}</b><br>Immediate operational blackout.", showlegend=False
             ))
 
     # --- 2. BASE GRAPH CONNECTIONS & INFRASTRUCTURE ---
     for edge in graph_data.get("edges", []):
         src = node_dict.get(edge["source"])
         tgt = node_dict.get(edge["target"])
-        if not src or not tgt:
-            continue
-            
+        if not src or not tgt: continue
         is_pipeline = edge.get("type") in ["pipeline", "terrestrial_pipeline"]
         line_color = "rgba(168, 85, 247, 0.4)" if is_pipeline else "rgba(100, 116, 139, 0.25)"
         line_width = 2 if is_pipeline else 1
@@ -69,34 +116,24 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             line_color = "rgba(239, 68, 68, 0.7)"
             line_width = 3
             line_dash = "dash"
-
-        fig.add_trace(go.Scattergeo(
-            lon=[src["lon"], tgt["lon"]],
-            lat=[src["lat"], tgt["lat"]],
-            mode="lines",
-            line=dict(width=line_width, color=line_color, dash=line_dash),
-            hoverinfo="skip",
-            showlegend=False
+            
+        fig.add_trace(go.Scattergeo(lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]], mode="lines",
+            line=dict(width=line_width, color=line_color, dash=line_dash), hoverinfo="skip", showlegend=False
         ))
 
-    # --- 3. LIVE AIS TRACKING MARKERS & TELEMETRY TOOLTIPS ---
+    # --- 3. LIVE AIS TRACKING MARKERS & NEON CORRIDORS ---
     ais_lats, ais_lons, ais_tooltips, ais_colors, ais_sizes = [], [], [], [], []
     current_utc = datetime.datetime.now(datetime.timezone.utc)
 
-    # Always highlight active shipping corridors in neon green
-    for route in active_routes:
-        corridor_name = route.get("Corridor", "").lower()
-        src_id = 3 if "hormuz" in corridor_name else (8 if "russian" in corridor_name else 1)
-        tgt_id = 7 if "visakh" in corridor_name else 4
-        
+    # 3A. Highlight the resolved multi-hop paths in Neon Green
+    for (src_id, tgt_id) in resolved_edges:
         if src_id in node_dict and tgt_id in node_dict:
             src, tgt = node_dict[src_id], node_dict[tgt_id]
+            active_ids.add(src_id)
+            active_ids.add(tgt_id)
             fig.add_trace(go.Scattergeo(
                 lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]],
-                mode="lines",
-                line=dict(width=2.5, color="#00FFAA"),
-                hoverinfo="skip",
-                showlegend=False
+                mode="lines", line=dict(width=2.5, color="#00FFAA"), hoverinfo="skip", showlegend=False
             ))
 
     if live_vessels:
@@ -145,61 +182,46 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
                 f"<b>Last Ping:</b> {ship.get('last_updated', current_utc).strftime('%H:%M:%S')} UTC"
             )
     else:
-        # Fallback: Interpolate simulated tankers along active sea lanes
-        for route in active_routes:
-            corridor_name = route.get("Corridor", "").lower()
-            src_id = 3 if "hormuz" in corridor_name else (8 if "russian" in corridor_name else 1)
-            tgt_id = 7 if "visakh" in corridor_name else 4
-            
+        # Fallback: Interpolate simulated tankers along the explicit resolved multi-hop edges
+        for (src_id, tgt_id) in resolved_edges:
             if src_id in node_dict and tgt_id in node_dict:
                 src, tgt = node_dict[src_id], node_dict[tgt_id]
+                
+                # Do not spawn ocean tankers on terrestrial pipelines
+                is_pipeline = any(e["source"] == src_id and e["target"] == tgt_id and "pipeline" in e.get("type", "") for e in graph_data.get("edges", []))
+                if is_pipeline: continue
+                
                 total_dist = _haversine_km(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
                 cog_angle = _calculate_cog(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
-                
-                # Simulate live vessel telemetry along the corridor fraction
-                for frac in [0.15, 0.42, 0.78]:
-                    vessel_lat = src["lat"] + (tgt["lat"] - src["lat"]) * frac + random.uniform(-0.3, 0.3)
-                    vessel_lon = src["lon"] + (tgt["lon"] - src["lon"]) * frac + random.uniform(-0.3, 0.3)
+
+                # Spawn ships at different segments of the edge
+                for frac in [0.25, 0.75]:
+                    vessel_lat = src["lat"] + (tgt["lat"] - src["lat"]) * frac + random.uniform(-0.2, 0.2)
+                    vessel_lon = src["lon"] + (tgt["lon"] - src["lon"]) * frac + random.uniform(-0.2, 0.2)
                     
                     rem_dist = total_dist * (1.0 - frac)
                     sog_knots = round(random.uniform(12.2, 14.8), 1)
-                    hours_to_arrival = rem_dist / (sog_knots * 1.852)
-                    eta_utc = current_utc + datetime.timedelta(hours=hours_to_arrival)
-                    mmsi = f"419{random.randint(100000, 999999)}"
+                    eta_utc = current_utc + datetime.timedelta(hours=(rem_dist / (sog_knots * 1.852)))
                     
                     is_anomaly = src_id in disrupted_ids or tgt_id in disrupted_ids
                     color = "#EF4444" if is_anomaly else "#00FFAA"
-                    nav_status = "⚠️ Transponder Gap / Spoofing Risk" if is_anomaly else "Under Way Using Engine"
-
+                    status = "⚠️ Transponder Gap" if is_anomaly else "Under Way Using Engine"
+                    
                     ais_lats.append(vessel_lat)
                     ais_lons.append(vessel_lon)
                     ais_colors.append(color)
                     ais_sizes.append(10 if is_anomaly else 8)
-                    
                     ais_tooltips.append(
-                        f"🚢 <b>LIVE AIS TARGET (SIMULATED)</b><br>"
-                        f"<b>MMSI:</b> {mmsi}<br>"
-                        f"<b>Status:</b> {nav_status}<br>"
+                        f"🚢 <b>LIVE AIS TARGET (SIMULATED)</b><br><b>Status:</b> {status}<br>"
                         f"<b>SOG (Speed):</b> {sog_knots} kts | <b>COG (Course):</b> {cog_angle:.0f}°<br>"
-                        f"<b>Bound For:</b> {tgt['name']}<br>"
-                        f"<b>Est. Distance:</b> {rem_dist:,.0f} km<br>"
-                        f"<b>UTC ETA:</b> {eta_utc.strftime('%Y-%m-%d %H:%M:%S')}"
+                        f"<b>Bound For:</b> {tgt['name']}<br><b>UTC ETA:</b> {eta_utc.strftime('%Y-%m-%d %H:%M')}"
                     )
 
     # Render Live Vessel Plot Layer
     if ais_lats:
-        fig.add_trace(go.Scattergeo(
-            lon=ais_lons, lat=ais_lats,
-            mode="markers",
-            marker=dict(
-                size=ais_sizes,
-                color=ais_colors,
-                symbol="triangle-up",
-                line=dict(width=1, color="#0A0E17")
-            ),
-            hoverinfo="text",
-            hovertext=ais_tooltips,
-            name="Live AIS Traffic"
+        fig.add_trace(go.Scattergeo(lon=ais_lons, lat=ais_lats, mode="markers",
+            marker=dict(size=ais_sizes, color=ais_colors, symbol="triangle-up", line=dict(width=1, color="#0A0E17")),
+            hoverinfo="text", hovertext=ais_tooltips, name="Live AIS Traffic"
         ))
 
     # --- 4. PORTS, REFINERIES & TERMINAL NODES ---
