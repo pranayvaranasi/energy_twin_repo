@@ -411,7 +411,7 @@ op_tab, econ_tab, infra_tab = st.tabs([
 ])
 
 with op_tab:
-    col_map, col_details = st.columns([2.2, 1.3])
+    col_map, col_details = st.columns([3.0, 1.0])
     
     # Load live vessels from tracker if API key is present
     api_key_env = os.getenv("AISSTREAM_API_KEY")
