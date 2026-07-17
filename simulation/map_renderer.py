@@ -77,32 +77,36 @@ def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set
     is_baseline = len(disrupted_ids) == 0
     
     if is_baseline:
-        # BASELINE STATE: Show all normal, uninterrupted import routes to India
-        # 1. Middle East to Indian Ports
-        route_edges.extend([(3, 21), (3, 22), (3, 30)])
-        # 2. Ports to Domestic Refineries via Pipeline
-        route_edges.extend([(21, 4), (22, 4), (30, 7), (21, 24)])
-        # 3. Russia to India via Suez Canal
-        route_edges.extend([(8, 15), (15, 6), (6, 21)])
-        # 4. US Gulf Coast to India via Suez Canal
-        route_edges.extend([(1, 6), (6, 22)])
+        # BASELINE STATE: Optimized Regional Sourcing
+        # 1. Middle East supplies WEST Coast Ports ONLY (Mundra, Vadinar)
+        route_edges.extend([(3, 21), (3, 22)]) 
+        
+        # 2. Russian Far East supplies EAST Coast Ports via Eastern Maritime Corridor (Vladivostok -> Malacca -> East Coast)
+        route_edges.extend([(16, 10), (10, 17), (10, 25), (10, 30)])
+        
+        # 3. Ports to Domestic Refineries via Pipeline
+        route_edges.extend([(21, 4), (22, 4), (21, 24), (30, 7), (25, 26)])
+        
+        # 4. Global imports via Suez route to the West Coast
+        route_edges.extend([(8, 15), (15, 6), (6, 21), (1, 6), (6, 22)])
+        
         return list(set(route_edges))
         
     # DISRUPTED STATE: Trace explicit paths based on active agentic routes
     for route in active_routes:
         corridor = route.get("Corridor", "").lower()
         
-        # Primary Cape of Good Hope Bypass
+        # Primary Cape of Good Hope Bypass (to West Coast)
         if "cape of good hope" in corridor:
             route_edges.extend([(1, 5), (2, 5), (8, 5), (5, 21), (21, 4)])
         
-        # Primary Suez Routing
+        # Primary Suez Routing (to West Coast)
         elif "suez" in corridor and 6 not in disrupted_ids:
             route_edges.extend([(1, 6), (8, 15), (15, 6), (6, 21), (21, 4)])
             
-        # Alternative: Eastern Maritime Corridor
+        # Alternative: Eastern Maritime Corridor (to East Coast)
         elif "eastern maritime" in corridor or "vladivostok" in corridor:
-            route_edges.extend([(16, 10), (10, 17), (10, 25), (25, 26)])
+            route_edges.extend([(16, 10), (10, 17), (10, 25), (10, 30), (30, 7), (25, 26)])
             
         # Alternative: INSTC Rail/Sea Corridor
         elif "instc" in corridor or "bandar abbas" in corridor:
@@ -119,7 +123,7 @@ def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set
             else:
                 route_edges.extend([(1, 5), (5, 21), (21, 4)])
                 
-    # Always maintain Middle East fallback if Hormuz (3) is not blocked
+    # Always maintain Middle East fallback to West Coast if Hormuz (3) is not blocked
     if 3 not in disrupted_ids:
         route_edges.extend([(3, 21), (3, 22), (21, 4), (22, 4)])
         
