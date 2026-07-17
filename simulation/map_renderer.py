@@ -375,7 +375,7 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
         plot_bgcolor="#0A0E17",
         font=dict(color="#E5E7EB"),
         margin=dict(r=0, t=40, l=0, b=0),
-        height=800
+        height=950
     )
     return fig
 

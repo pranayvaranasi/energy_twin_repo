@@ -409,39 +409,37 @@ op_tab, econ_tab, infra_tab = st.tabs([
 ])
 
 with op_tab:
-    col_map, col_details = st.columns([3.0, 1.0])
     api_key_env = os.getenv("AISSTREAM_API_KEY")
+        
+    st.subheader("Geospatial Intelligence (GEOINT) Platform")
 
-    with col_map:
-        st.subheader("Geospatial Intelligence (GEOINT) Platform")
+        # 🚀 1. FULL-WIDTH MAP: Renders across the entire screen
+    @st.fragment(run_every="5s")
+    def render_live_map():
+        current_live_vessels = None
+        if api_key_env:
+            tracker = get_ais_tracker(api_key_env)
+            if tracker:
+                with tracker.lock:
+                    current_live_vessels = dict(tracker.vessels)
 
-        # 🚀 NATIVE PARTIAL RERUNS: Only this isolated function refreshes every 5 seconds
-        @st.fragment(run_every="5s")
-        def render_live_map():
-            # 1. Fetch the latest live vessels from the background tracker thread
-            current_live_vessels = None
-            if api_key_env:
-                tracker = get_ais_tracker(api_key_env)
-                if tracker:
-                    with tracker.lock:
-                        current_live_vessels = dict(tracker.vessels)
-
-            # 2. Render the map using the cached session state + new vessel data
-            live_map_fig = generate_live_ais_map(
-                st.session_state.impact_data, 
-                st.session_state.routes, 
-                st.session_state.inventory_result, 
-                live_vessels=current_live_vessels 
+        live_map_fig = generate_live_ais_map(
+            st.session_state.impact_data, 
+            st.session_state.routes, 
+            st.session_state.inventory_result, 
+            live_vessels=current_live_vessels
             )
             
-            # 3. Push the isolated update to the frontend
-            st.plotly_chart(live_map_fig, use_container_width=True)
+        st.plotly_chart(live_map_fig, use_container_width=True)
 
-        # Execute the fragment
-        render_live_map()
+    render_live_map()
         
-    with col_details:
-        # NEW: GEOINT AIS Tracking Analytics
+    st.divider()
+
+        # 🚀 2. ANALYTICS ROW: Placed cleanly below the massive map
+    col_ais, col_procurement = st.columns(2)
+
+    with col_ais:
         st.subheader("🛰️ Active AIS Telemetry")
         with st.container(border=True):
             st.markdown("##### 📡 Vessel Transponder Anomalies")
@@ -451,54 +449,47 @@ with op_tab:
                 st.markdown("- **MMSI 41977283**: Signal Lost (14 hrs ago)")
             else:
                 st.success("**AIS Integrity Verified:** All inbound VLCC/Suezmax vessels are transmitting compliant Navigational Status and accurate SOG/COG data.")
-        
-        st.divider()
-        
+
+    with col_procurement:
         st.subheader("📡 Real-Time Procurement Ingestion")
-        
-        # 1. Traditional Stranded Inventory Metrics
         if st.session_state.inventory_result:
             with st.container(border=True):
                 st.markdown("##### ⚠️ Stranded Cargo & Economic Exposure")
                 st.write(f"**Stranded Volume:** {st.session_state.inventory_result['stranded_volume']}")
                 st.error(f"Daily Downtime Exposure: {st.session_state.inventory_result['operational_stoppage_exposure']}")
-                
+                    
                 if st.session_state.inventory_result.get("refinery_impacts"):
                     st.markdown("**Refinery Depletion Lifelines:**")
                     for ref in st.session_state.inventory_result["refinery_impacts"]:
                         st.caption(f"• **{ref['name']}**: {ref['days_of_cover']} remaining ({ref['risk_tier']} Tier)")
-        
-        st.divider()
-        
-        # 2. NEW: Actionable Alternative Source Ranking Interface
-        st.subheader("🔄 Automated Sourcing Manifest")
-        current_target_facility = st.session_state.get("selected_entry_name", "Jamnagar Refinery")
-        active_blockades = st.session_state.impact_data.get("disrupted_nodes", [])
-        
-        with st.spinner("Compiling spot markets, tanker liquidity, and chemical assays..."):
-            from simulation.procurement_agent import generate_agentic_recommendations
-            procurement_output = generate_agentic_recommendations(current_target_facility, active_blockades)
-            
-        brief = procurement_output["brief"]
-        st.session_state.procurement_matrix = procurement_output["matrix"]
-        matrix_df = pd.DataFrame(procurement_output["matrix"])
-        
-        # Render the Agent's cognitive text sign-off
-        st.caption(f"🤖 **Agent Executive Brief:** {brief['executive_summary']}")
-        
-        # Render immediate, actionable tasks with explicit timeframes
-        for item in brief.get("actionable_manifest", []):
-            with st.chat_message("assistant", avatar="💼"):
-                st.markdown(f"**Rank {item['priority_rank']}: {item['crude_grade']} via {item['corridor']}**")
-                st.markdown(f"* Landed Cost: `{item['landed_cost_adjusted']}` | Window: :red[{item['urgency_window']}]")
-                st.info(f"**Immediate Action:** {item['action_item']}")
 
-        # Expandable system validation audit matrix for judges
-        with st.expander("🔎 Audit Core Multi-Attribute Ingestion Data", expanded=False):
-            st.dataframe(
-                matrix_df[["crude_grade", "supplier", "logistics_corridor", "landed_cost", "assay_fit_score", "executability_index"]],
-                use_container_width=True,
-                hide_index=True
+    st.divider()
+        
+        # 3. AUTOMATED SOURCING MANIFEST (Spans full width at the bottom)
+    st.subheader("🔄 Automated Sourcing Manifest")
+    current_target_facility = st.session_state.get("selected_entry_name", "Jamnagar Refinery")
+    active_blockades = st.session_state.impact_data.get("disrupted_nodes", [])
+        
+    with st.spinner("Compiling spot markets, tanker liquidity, and chemical assays..."):
+        from simulation.procurement_agent import generate_agentic_recommendations
+        procurement_output = generate_agentic_recommendations(current_target_facility, active_blockades)
+            
+    brief = procurement_output["brief"]
+    st.session_state.procurement_matrix = procurement_output["matrix"]
+    matrix_df = pd.DataFrame(procurement_output["matrix"])
+        
+    st.caption(f"🤖 **Agent Executive Brief:** {brief['executive_summary']}")
+        
+    for item in brief.get("actionable_manifest", []):
+        with st.chat_message("assistant", avatar="💼"):
+            st.markdown(f"**Rank {item['priority_rank']}: {item['crude_grade']} via {item['corridor']}**")
+            st.markdown(f"* Landed Cost: `{item['landed_cost_adjusted']}` | Window: :red[{item['urgency_window']}]")
+            st.info(f"**Immediate Action:** {item['action_item']}")
+
+    with st.expander("🔎 Audit Core Multi-Attribute Ingestion Data", expanded=False):
+        st.dataframe(
+            matrix_df[["crude_grade", "supplier", "logistics_corridor", "landed_cost", "assay_fit_score", "executability_index"]],
+            use_container_width=True, hide_index=True
             )
 
 # TAB 2: MACROECONOMICS & POLICY (SPR TAPER SCHEDULE)
