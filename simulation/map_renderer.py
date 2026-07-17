@@ -30,6 +30,39 @@ def _get_maritime_route(lat1: float, lon1: float, lat2: float, lon2: float):
         return [lon1, lon2], [lat1, lat2]
 
 
+# --- TERRESTRIAL PIPELINE WAYPOINTS ---
+# Real-world Indian pipeline contours to avoid straight lines crossing arbitrary terrain.
+# Modeled after the MPPL, PHBPL, and SMPL networks.
+PIPELINE_WAYPOINTS = {
+    (21, 24): [[23.83, 71.60], [26.44, 74.63], [26.91, 75.78]], # Mundra-Panipat Pipeline (MPPL)
+    (22, 12): [[24.17, 72.43], [28.18, 76.61]], # Vadinar to Delhi NCR
+    (4, 11): [[22.30, 70.80], [21.17, 72.83]], # Jamnagar to Mumbai
+    (4, 28): [[22.30, 70.80], [21.17, 72.83], [20.90, 74.77]], # Jamnagar to Manmad
+    (23, 9):  [[11.25, 75.78]], # Kochi to Mangalore (Coastal Pipeline)
+    (23, 13): [[11.01, 76.95], [11.66, 78.14]], # Kochi to Bangalore
+    (7, 29):  [[17.00, 81.80]], # Visakhapatnam to Kondapalli
+    (26, 27): [[22.06, 88.06], [25.43, 86.13], [26.44, 80.33], [27.17, 78.00]], # Paradip to Delhi via Haldia/Barauni (PHBPL)
+    (14, 19): [[31.08, 29.82]], # Sumed Pipeline to Med Coast (Sidi Kerir)
+}
+
+def _get_pipeline_route(src_id: int, tgt_id: int, src: dict, tgt: dict):
+    """Generates authentic terrestrial pipeline paths using geographic waypoints."""
+    # Check both forward and reverse directions
+    waypoints = PIPELINE_WAYPOINTS.get((src_id, tgt_id))
+    if not waypoints:
+        reverse_waypoints = PIPELINE_WAYPOINTS.get((tgt_id, src_id))
+        waypoints = list(reversed(reverse_waypoints)) if reverse_waypoints else []
+            
+    lons, lats = [src["lon"]], [src["lat"]]
+    for wp_lat, wp_lon in waypoints:
+        lons.append(wp_lon)
+        lats.append(wp_lat)
+        
+    lons.append(tgt["lon"])
+    lats.append(tgt["lat"])
+    return lons, lats
+
+
 def _calculate_cog(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates Course Over Ground (COG) bearing in degrees."""
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -134,9 +167,10 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             line_width = 3
             line_dash = "dash"
             
-        # GEOINT ROUTING: Use Searoute for oceans, straight lines for pipelines
+        # GEOINT ROUTING: Use Searoute for oceans, Waypoints for terrestrial pipelines
         if is_pipeline:
-            route_lons, route_lats = [src["lon"], tgt["lon"]], [src["lat"], tgt["lat"]]
+            # Use actual pipeline contours instead of straight lines
+            route_lons, route_lats = _get_pipeline_route(edge["source"], edge["target"], src, tgt)
         else:
             route_lons, route_lats = _get_maritime_route(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
             
@@ -155,10 +189,15 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             active_ids.add(src_id)
             active_ids.add(tgt_id)
             
-            is_pipeline = any(e["source"] == src_id and e["target"] == tgt_id and "pipeline" in e.get("type", "") for e in graph_data.get("edges", []))
+            # Make the pipeline check bidirectional to prevent searoute misfires
+            is_pipeline = any(
+                (e["source"] == src_id and e["target"] == tgt_id or e["source"] == tgt_id and e["target"] == src_id) 
+                and "pipeline" in e.get("type", "") 
+                for e in graph_data.get("edges", [])
+            )
             
             if is_pipeline:
-                route_lons, route_lats = [src["lon"], tgt["lon"]], [src["lat"], tgt["lat"]]
+                route_lons, route_lats = _get_pipeline_route(src_id, tgt_id, src, tgt)
             else:
                 route_lons, route_lats = _get_maritime_route(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
             
