@@ -2,8 +2,10 @@ import math
 import random
 import datetime
 import plotly.graph_objects as go
+import searoute
 from typing import Dict, Any, List
 from simulation.data_loader import get_cached_graph_data
+
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates great-circle distance in km."""
@@ -13,6 +15,20 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     delta_lambda = math.radians(lon2 - lon1)
     a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
     return 2 * R * math.asin(math.sqrt(a))
+
+def _get_maritime_route(lat1: float, lon1: float, lat2: float, lon2: float):
+    """Uses the searoute library to calculate water-only maritime paths."""
+    try:
+        # searoute takes [lon, lat] pairs
+        route = searoute.searoute([lon1, lat1], [lon2, lat2])
+        coords = route["geometry"]["coordinates"]
+        lons = [c[0] for c in coords]
+        lats = [c[1] for c in coords]
+        return lons, lats
+    except Exception:
+        # Fallback to straight line if routing fails
+        return [lon1, lon2], [lat1, lat2]
+
 
 def _calculate_cog(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates Course Over Ground (COG) bearing in degrees."""
@@ -107,6 +123,7 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
         src = node_dict.get(edge["source"])
         tgt = node_dict.get(edge["target"])
         if not src or not tgt: continue
+        
         is_pipeline = edge.get("type") in ["pipeline", "terrestrial_pipeline"]
         line_color = "rgba(168, 85, 247, 0.4)" if is_pipeline else "rgba(100, 116, 139, 0.25)"
         line_width = 2 if is_pipeline else 1
@@ -117,7 +134,13 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             line_width = 3
             line_dash = "dash"
             
-        fig.add_trace(go.Scattergeo(lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]], mode="lines",
+        # GEOINT ROUTING: Use Searoute for oceans, straight lines for pipelines
+        if is_pipeline:
+            route_lons, route_lats = [src["lon"], tgt["lon"]], [src["lat"], tgt["lat"]]
+        else:
+            route_lons, route_lats = _get_maritime_route(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
+            
+        fig.add_trace(go.Scattergeo(lon=route_lons, lat=route_lats, mode="lines",
             line=dict(width=line_width, color=line_color, dash=line_dash), hoverinfo="skip", showlegend=False
         ))
 
@@ -131,10 +154,49 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             src, tgt = node_dict[src_id], node_dict[tgt_id]
             active_ids.add(src_id)
             active_ids.add(tgt_id)
+            
+            is_pipeline = any(e["source"] == src_id and e["target"] == tgt_id and "pipeline" in e.get("type", "") for e in graph_data.get("edges", []))
+            
+            if is_pipeline:
+                route_lons, route_lats = [src["lon"], tgt["lon"]], [src["lat"], tgt["lat"]]
+            else:
+                route_lons, route_lats = _get_maritime_route(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
+            
             fig.add_trace(go.Scattergeo(
-                lon=[src["lon"], tgt["lon"]], lat=[src["lat"], tgt["lat"]],
+                lon=route_lons, lat=route_lats,
                 mode="lines", line=dict(width=2.5, color="#00FFAA"), hoverinfo="skip", showlegend=False
             ))
+            
+            # Place AIS ships exactly on the maritime path
+            if not is_pipeline and not live_vessels:
+                total_dist = _haversine_km(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
+                cog_angle = _calculate_cog(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
+
+                for frac in [0.25, 0.75]:
+                    # Pick a coordinate from the actual water route array
+                    point_index = int(len(route_lons) * frac)
+                    if point_index >= len(route_lons): point_index = -1
+                    
+                    vessel_lon = route_lons[point_index] + random.uniform(-0.1, 0.1)
+                    vessel_lat = route_lats[point_index] + random.uniform(-0.1, 0.1)
+                    
+                    rem_dist = total_dist * (1.0 - frac)
+                    sog_knots = round(random.uniform(12.2, 14.8), 1)
+                    eta_utc = current_utc + datetime.timedelta(hours=(rem_dist / (sog_knots * 1.852)))
+                    
+                    is_anomaly = src_id in disrupted_ids or tgt_id in disrupted_ids
+                    color = "#EF4444" if is_anomaly else "#00FFAA"
+                    status = "⚠️ Transponder Gap" if is_anomaly else "Under Way Using Engine"
+                    
+                    ais_lats.append(vessel_lat)
+                    ais_lons.append(vessel_lon)
+                    ais_colors.append(color)
+                    ais_sizes.append(10 if is_anomaly else 8)
+                    ais_tooltips.append(
+                        f"🚢 <b>LIVE AIS TARGET (SIMULATED)</b><br><b>Status:</b> {status}<br>"
+                        f"<b>SOG (Speed):</b> {sog_knots} kts | <b>COG (Course):</b> {cog_angle:.0f}°<br>"
+                        f"<b>Bound For:</b> {tgt['name']}<br><b>UTC ETA:</b> {eta_utc.strftime('%Y-%m-%d %H:%M')}"
+                    )
 
     if live_vessels:
         # Plot real-time AIS feed targets
@@ -181,41 +243,6 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
                 f"<b>Lat/Lon:</b> {vessel_lat:.4f}, {vessel_lon:.4f}<br>"
                 f"<b>Last Ping:</b> {ship.get('last_updated', current_utc).strftime('%H:%M:%S')} UTC"
             )
-    else:
-        # Fallback: Interpolate simulated tankers along the explicit resolved multi-hop edges
-        for (src_id, tgt_id) in resolved_edges:
-            if src_id in node_dict and tgt_id in node_dict:
-                src, tgt = node_dict[src_id], node_dict[tgt_id]
-                
-                # Do not spawn ocean tankers on terrestrial pipelines
-                is_pipeline = any(e["source"] == src_id and e["target"] == tgt_id and "pipeline" in e.get("type", "") for e in graph_data.get("edges", []))
-                if is_pipeline: continue
-                
-                total_dist = _haversine_km(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
-                cog_angle = _calculate_cog(src["lat"], src["lon"], tgt["lat"], tgt["lon"])
-
-                # Spawn ships at different segments of the edge
-                for frac in [0.25, 0.75]:
-                    vessel_lat = src["lat"] + (tgt["lat"] - src["lat"]) * frac + random.uniform(-0.2, 0.2)
-                    vessel_lon = src["lon"] + (tgt["lon"] - src["lon"]) * frac + random.uniform(-0.2, 0.2)
-                    
-                    rem_dist = total_dist * (1.0 - frac)
-                    sog_knots = round(random.uniform(12.2, 14.8), 1)
-                    eta_utc = current_utc + datetime.timedelta(hours=(rem_dist / (sog_knots * 1.852)))
-                    
-                    is_anomaly = src_id in disrupted_ids or tgt_id in disrupted_ids
-                    color = "#EF4444" if is_anomaly else "#00FFAA"
-                    status = "⚠️ Transponder Gap" if is_anomaly else "Under Way Using Engine"
-                    
-                    ais_lats.append(vessel_lat)
-                    ais_lons.append(vessel_lon)
-                    ais_colors.append(color)
-                    ais_sizes.append(10 if is_anomaly else 8)
-                    ais_tooltips.append(
-                        f"🚢 <b>LIVE AIS TARGET (SIMULATED)</b><br><b>Status:</b> {status}<br>"
-                        f"<b>SOG (Speed):</b> {sog_knots} kts | <b>COG (Course):</b> {cog_angle:.0f}°<br>"
-                        f"<b>Bound For:</b> {tgt['name']}<br><b>UTC ETA:</b> {eta_utc.strftime('%Y-%m-%d %H:%M')}"
-                    )
 
     # Render Live Vessel Plot Layer
     if ais_lats:
