@@ -153,81 +153,73 @@ st.sidebar.header("🛡️ Risk Intelligence Engine")
 st.sidebar.markdown("🟢 **System Status:** `Live C++ Engine Connected`")
 st.sidebar.divider()
 
-autonomous_triggered = False
+# 🚀 NEW: CACHED AUTO-PILOT LOGIC
+st.sidebar.subheader("📡 Autonomous Agent Mode")
+st.sidebar.caption("Deploy neural threat-hunting crawlers to actively scan breaking news feeds.")
+
+# Cache the API call (Time-To-Live = 120s) so it doesn't spam Exa/Gemini on every frame refresh
+@st.cache_data(ttl=120)
+def get_cached_intelligence():
+    return ingest_and_classify_news()
+
+# The Single Toggle that replaces all the manual clicking
+auto_pilot = st.sidebar.toggle("🤖 Enable Auto-Pilot Threat Hunting", value=False)
+
 disruption_event = "Baseline (No Disruption)"
 severity = 1
 
-st.sidebar.subheader("📡 Autonomous Agent Mode")
-st.sidebar.caption("Deploy neural threat-hunting crawlers to actively scan breaking news feeds.")
-if st.sidebar.button("Fetch Live Multi-Source Intelligence", type="secondary", use_container_width=True):
-    autonomous_triggered = True
+if auto_pilot:
     with st.spinner("Aggregating AIS, Sanctions, News, and Market Data..."):
-        time.sleep(0.8)
-        signal_data = ingest_and_classify_news()
-
+        signal_data = get_cached_intelligence()
+        
     st.sidebar.warning(f"🚨 **Threat Detected:** {signal_data['trigger_event']}")
     st.sidebar.caption(f"*{signal_data['reasoning']}*")
-
+    
     st.sidebar.markdown("### 🌊 Disruption Risk by Corridor")
     for corridor, risk in signal_data.get('corridors', {}).items():
         st.sidebar.progress(risk / 100.0, text=f"{corridor}: {risk}% Risk")
-
+        
     st.sidebar.markdown("### 🛢️ Supply Risk by Supplier")
     for supplier, risk in signal_data.get('suppliers', {}).items():
         st.sidebar.progress(risk / 100.0, text=f"{supplier}: {risk}% Risk")
-
+        
     disruption_event = signal_data['trigger_event']
     severity = signal_data['calculated_severity']
+    
+    # Disable manual overrides while Auto-Pilot is in control
+    st.session_state.custom_impact = None
 
-
-if not autonomous_triggered:
+else:
     st.sidebar.subheader("🎛️ Continuous 'What-If' Scenario Builder")
     st.sidebar.caption("Inject multi-variable network shocks for persistent stress testing.")
     
-    # Allow the user to stack multiple failures
+    # Allow the user to stack multiple failures manually
     custom_disruptions = st.sidebar.multiselect(
         "Select Target Nodes to Disable:",
-        options=[
-            "Red Sea / Suez", 
-            "Middle East (Hormuz)", 
-            "Jamnagar Refinery", 
-            "Strait of Malacca",
-            "Delhi NCR Hub"
-        ],
+        options=["Red Sea / Suez", "Middle East (Hormuz)", "Jamnagar Refinery", "Strait of Malacca", "Delhi NCR Hub"],
         default=["Red Sea / Suez"]
     )
     
     severity = st.sidebar.slider("Global Contagion Severity Factor", 1, 10, 6)
+    node_map = {"Red Sea / Suez": 6, "Middle East (Hormuz)": 3, "Jamnagar Refinery": 4, "Strait of Malacca": 10, "Delhi NCR Hub": 12}
     
-    # Map the UI strings back to the new Graph IDs for the C++ engine
-    node_map = {
-        "Red Sea / Suez": 6, 
-        "Middle East (Hormuz)": 3, 
-        "Jamnagar Refinery": 4, 
-        "Strait of Malacca": 10,
-        "Delhi NCR Hub": 12
-    }
-    
-    # Dynamically build the disruption event based on the user's custom what-if scenario
     if custom_disruptions:
         disrupted_ids = [node_map[node] for node in custom_disruptions]
         disruption_event = f"Custom What-If: {', '.join(custom_disruptions)}"
         
-        # Inject custom scenario parameters into SCENARIO_BASELINE
         from simulation.mcts_engine import SCENARIO_BASELINE
         SCENARIO_BASELINE[disruption_event] = {
-            "base_nodes": [1, 2, 8, 9], # Safe origins
+            "base_nodes": [1, 2, 8, 9], 
             "disrupted_nodes": disrupted_ids,
             "volatility": 0.50,
             "contagion_alpha": 0.30
         }
         
-        # Override the default impact data before the simulation runs
         st.session_state.custom_impact = {
             "disrupted_nodes": disrupted_ids,
             "calculated_severity": severity,
             "trigger_event": disruption_event,
-            "base_nodes": [1, 2, 8, 9] # Safe origins
+            "base_nodes": [1, 2, 8, 9] 
         }
     else:
         disruption_event = "Baseline (No Disruption)"
@@ -260,13 +252,21 @@ if "simulation_run" not in st.session_state:
     st.session_state.inventory_result = None
     st.session_state.custom_impact = None
     st.session_state.procurement_matrix = []
+    st.session_state.last_auto_event = None
 
-# --- 3. THE SIMULATION ORCHESTRATION ---
-if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_width=True):
+# Hide the manual run button if the AI is in Auto-Pilot mode
+manual_run = False
+if not auto_pilot:
+    manual_run = st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_width=True)
+
+# AUTOMATION TRIGGER: Fire automatically if Auto-Pilot is ON and a new threat state is detected
+auto_trigger = auto_pilot and (st.session_state.get("last_auto_event") != disruption_event or not st.session_state.simulation_run)
+
+if manual_run or auto_trigger:
+    # Save the event state so it doesn't loop infinitely
+    st.session_state.last_auto_event = disruption_event
     
-    # Track end-to-end response time
     start_time = time.perf_counter()
-    
     with st.status("Orchestrating Digital Twin Modules...", expanded=True) as status:
         if getattr(st.session_state, "custom_impact", None) is not None:
             st.write("🎛️ **Scenario Builder:** Injecting custom what-if parameters...")
