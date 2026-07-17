@@ -319,9 +319,7 @@ if st.sidebar.button("Run Adaptive Simulation", type="primary", use_container_wi
         st.toast("Simulation Complete. AI Copilot is ready for queries.", icon="✅")
 
 # --- 4. MAIN LAYOUT: RE-ENGINEERED KPI OVERVIEW ---
-if st.session_state.simulation_run:
-    from streamlit_autorefresh import st_autorefresh
-    st_autorefresh(interval=5000, key="ais_live_tracker_refresh")
+
 
 if not st.session_state.simulation_run:
     # UX UPGRADE: The "Empty State" Onboarding
@@ -412,25 +410,35 @@ op_tab, econ_tab, infra_tab = st.tabs([
 
 with op_tab:
     col_map, col_details = st.columns([3.0, 1.0])
-    
-    # Load live vessels from tracker if API key is present
     api_key_env = os.getenv("AISSTREAM_API_KEY")
-    live_vessels = None
-    if api_key_env:
-        tracker = get_ais_tracker(api_key_env)
-        if tracker:
-            with tracker.lock:
-                live_vessels = dict(tracker.vessels)
-                
+
     with col_map:
         st.subheader("Geospatial Intelligence (GEOINT) Platform")
-        live_map_fig = generate_live_ais_map(
-            st.session_state.impact_data,
-            st.session_state.routes,
-            st.session_state.inventory_result,
-            live_vessels=live_vessels,
-        )
-        st.plotly_chart(live_map_fig, use_container_width=True)
+
+        # 🚀 NATIVE PARTIAL RERUNS: Only this isolated function refreshes every 5 seconds
+        @st.fragment(run_every="5s")
+        def render_live_map():
+            # 1. Fetch the latest live vessels from the background tracker thread
+            current_live_vessels = None
+            if api_key_env:
+                tracker = get_ais_tracker(api_key_env)
+                if tracker:
+                    with tracker.lock:
+                        current_live_vessels = dict(tracker.vessels)
+
+            # 2. Render the map using the cached session state + new vessel data
+            live_map_fig = generate_live_ais_map(
+                st.session_state.impact_data, 
+                st.session_state.routes, 
+                st.session_state.inventory_result, 
+                live_vessels=current_live_vessels 
+            )
+            
+            # 3. Push the isolated update to the frontend
+            st.plotly_chart(live_map_fig, use_container_width=True)
+
+        # Execute the fragment
+        render_live_map()
         
     with col_details:
         # NEW: GEOINT AIS Tracking Analytics
