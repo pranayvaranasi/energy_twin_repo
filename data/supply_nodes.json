@@ -138,11 +138,11 @@
     },
     {
       "id": 18,
-      "name": "Bandar Abbas (INSTC Hub)",
+      "name": "Chabahar Port (INSTC Hub)",
       "type": "port",
       "capacity_mmbpd": 2.1,
-      "lat": 27.18,
-      "lon": 56.27
+      "lat": 25.29,
+      "lon": 60.64
     },
     {
       "id": 19,

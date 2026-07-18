@@ -151,11 +151,11 @@ def get_optimized_corridors(impact_data):
         # OPTION 2: Multi-Modal Hedge via Iran/Russia (To West Coast)
         routes.append({
             "Action Type": "Multi-Modal Hedge",
-            "Corridor": "INSTC (Russia to India via Bandar Abbas)",
+            "Corridor": "INSTC (Russia to India via Chabahar Port)",
             "Vessel Class": "Rail / Aframax",
             "Transit Time": "21 Days",
             "Freight Rate": f"${base_freight_rate * 1.4:.2f} / bbl",
-            "War Risk Ins.": f"{war_risk_premium:.2f}%",
+            "War Risk Ins.": "0.05% (Safe Waters)", # Now safe because it's outside Hormuz
             "Executability": "78% (Subject to Rail Capacity)"
         })
     else:

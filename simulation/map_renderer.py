@@ -109,7 +109,7 @@ def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set
             route_edges.extend([(16, 10), (10, 17), (10, 25), (10, 30), (30, 7), (25, 26)])
             
         # Alternative: INSTC Rail/Sea Corridor
-        elif "instc" in corridor or "bandar abbas" in corridor:
+        elif "instc" in corridor or "chabahar" in corridor:
             route_edges.extend([(8, 18), (18, 21), (21, 4)])
             
         # Alternative: Sumed Pipeline

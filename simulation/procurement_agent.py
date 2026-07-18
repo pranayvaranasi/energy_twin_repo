@@ -48,7 +48,7 @@ CORRIDOR_LOGISTICS_FEED = {
         "freight_vlcc": 1.70, "tanker_availability": "High", "port_congestion_days": 1.0, "transit_days": 24, "mode": "sea_lane",
         "strategic_advantage": "Bypasses European Sanction Zones"
     },
-    "INSTC (Russia to India via Bandar Abbas)": {
+    "INSTC (Russia to India via Chabahar Port)": {
         "freight_vlcc": 1.40, "tanker_availability": "N/A (Rail/Ship)", "port_congestion_days": 4.0, "transit_days": 21, "mode": "multi_modal",
         "strategic_advantage": "30% cheaper and 40% shorter than traditional Suez route"
     },
