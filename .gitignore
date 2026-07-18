@@ -1,0 +1,18 @@
+# Environment Secrets (CRITICAL)
+.env
+.env.local
+*.env
+
+# Python Caches & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.history/
+
+# Streamlit Local Configuration
+.streamlit/secrets.toml
+
+# Operating System Files
+.DS_Store
+Thumbs.db

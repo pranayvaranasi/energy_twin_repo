@@ -259,27 +259,53 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
     if live_vessels:
         # Plot real-time AIS feed targets
         for mmsi, ship in live_vessels.items():
-            ship_type = ship.get("type", 0)
+            ship_type = ship.get("type")
+            if ship_type is None:
+                ship_type = 0
             is_tanker = 80 <= ship_type <= 89
-            name_upper = ship.get("name", "").upper()
+            
+            ship_name = ship.get("name")
+            if ship_name is None:
+                ship_name = "Unknown Tanker"
+            name_upper = ship_name.upper()
             is_tanker_name = any(k in name_upper for k in ["TANKER", "VLCC", "SUEZMAX", "CRUDE", "OIL", "CARRIER", "PETRO"])
             
             # Filter: Show crude oil tankers only
             if not is_tanker and not is_tanker_name:
                 continue
 
-            vessel_lat = ship["lat"]
-            vessel_lon = ship["lon"]
-            sog_knots = ship.get("sog", 0.0)
-            cog_angle = ship.get("cog", 0.0)
-            ship_name = ship.get("name", "Unknown Tanker")
+            vessel_lat = ship.get("lat")
+            vessel_lon = ship.get("lon")
+            if vessel_lat is None or vessel_lon is None:
+                continue
+            try:
+                vessel_lat = float(vessel_lat)
+                vessel_lon = float(vessel_lon)
+            except (ValueError, TypeError):
+                continue
+
+            sog_knots = ship.get("sog")
+            if sog_knots is None:
+                sog_knots = 0.0
+            cog_angle = ship.get("cog")
+            if cog_angle is None:
+                cog_angle = 0.0
             
             # Check for anomalies near disrupted chokepoint zones
             is_anomaly = False
             for dis_id in disrupted_ids:
                 if dis_id in node_dict:
                     dis_node = node_dict[dis_id]
-                    dist_to_dis = _haversine_km(vessel_lat, vessel_lon, dis_node["lat"], dis_node["lon"])
+                    dis_lat = dis_node.get("lat")
+                    dis_lon = dis_node.get("lon")
+                    if dis_lat is None or dis_lon is None:
+                        continue
+                    try:
+                        dis_lat = float(dis_lat)
+                        dis_lon = float(dis_lon)
+                    except (ValueError, TypeError):
+                        continue
+                    dist_to_dis = _haversine_km(vessel_lat, vessel_lon, dis_lat, dis_lon)
                     if dist_to_dis < 350:
                         is_anomaly = True
                         break
