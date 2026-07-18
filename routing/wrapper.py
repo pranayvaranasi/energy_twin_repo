@@ -119,44 +119,69 @@ def get_optimized_corridors(impact_data):
     # ---------------------------------------------------------
     # REAL-WORLD PROCUREMENT & EXECUTABILITY LOGIC
     # ---------------------------------------------------------
-    
     # Base maritime economics (Worldscale equivalents)
     base_freight_rate = BASE_FREIGHT_RATE_USD
     war_risk_premium = SAFE_WATER_WAR_RISK_PCT
     
+    is_red_sea_blocked = 6 in disrupted_ids
+    is_hormuz_blocked = 3 in disrupted_ids
+
     # Adjust logistics economics based on the specific geopolitical shock
-    if 6 in disrupted_ids: # Red Sea / Bab el-Mandeb disrupted
+    if is_red_sea_blocked:
         war_risk_premium = RED_SEA_WAR_RISK_PCT
-    elif 3 in disrupted_ids: # Strait of Hormuz disrupted
+    elif is_hormuz_blocked:
         base_freight_rate *= 2.5 # Panic spot rates in the Arabian Gulf
         war_risk_premium = HORMUZ_WAR_RISK_PCT
 
     routes = []
-    
-    # OPTION 1: Mathematical Optimal (Driven by the C++ Engine)
-    is_cape_routing = 6 in disrupted_ids
-    routes.append({
-        "Action Type": "Primary Deployment",
-        "Corridor": "Cape of Good Hope Bypass" if is_cape_routing else "Suez Canal Direct",
-        "Vessel Class": "VLCC (2M bbls)" if is_cape_routing else "Suezmax (1M bbls)",
-        "Transit Time": f"{28 + (severity * 1.5):.0f} Days" if is_cape_routing else f"{14 + (severity * 0.5):.0f} Days",
-        "Freight Rate": f"${base_freight_rate * (1.8 if is_cape_routing else 1.0):.2f} / bbl",
-        "War Risk Ins.": f"{war_risk_premium:.2f}%",
-        "Executability": "92% (High Confidence)" if optimal_score != -1.0 else "FATAL (No Path)"
-    })
 
-    # OPTION 2: Spot Market Hedge (Geopolitical Diversification)
-    routes.append({
-        "Action Type": "Spot Market Hedge",
-        "Corridor": "US Gulf Coast (USGC) to West Coast India",
-        "Vessel Class": "Aframax (750k bbls) - STS Transfer",
-        "Transit Time": "35 Days",
-        "Freight Rate": f"${base_freight_rate * 2.2:.2f} / bbl",
-        "War Risk Ins.": "0.05% (Safe Waters)",
-        "Executability": "75% (Subject to Vessel Availability)"
-    })
-    
-    # OPTION 3: Strategic Mitigation (Domestic Fallback)
+    # DYNAMIC LOGIC: Shift logistics vectors based on which chokepoint is dead
+    if is_hormuz_blocked:
+        # OPTION 1: Pivot to Russian Far East (Eastern Maritime Corridor to East Coast)
+        routes.append({
+            "Action Type": "Primary Deployment (East Coast Pivot)",
+            "Corridor": "Eastern Maritime Corridor (Vladivostok to Chennai)",
+            "Vessel Class": "Suezmax (1M bbls)",
+            "Transit Time": "24 Days",
+            "Freight Rate": f"${base_freight_rate * 1.2:.2f} / bbl",
+            "War Risk Ins.": "0.05% (Safe Waters)",
+            "Executability": "92% (High Confidence)"
+        })
+        
+        # OPTION 2: Multi-Modal Hedge via Iran/Russia (To West Coast)
+        routes.append({
+            "Action Type": "Multi-Modal Hedge",
+            "Corridor": "INSTC (Russia to India via Bandar Abbas)",
+            "Vessel Class": "Rail / Aframax",
+            "Transit Time": "21 Days",
+            "Freight Rate": f"${base_freight_rate * 1.4:.2f} / bbl",
+            "War Risk Ins.": f"{war_risk_premium:.2f}%",
+            "Executability": "78% (Subject to Rail Capacity)"
+        })
+    else:
+        # OPTION 1: Standard routing (Suez or Cape of Good Hope)
+        routes.append({
+            "Action Type": "Primary Deployment",
+            "Corridor": "Cape of Good Hope Bypass" if is_red_sea_blocked else "Suez Canal Direct",
+            "Vessel Class": "VLCC (2M bbls)" if is_red_sea_blocked else "Suezmax (1M bbls)",
+            "Transit Time": f"{28 + (severity * 1.5):.0f} Days" if is_red_sea_blocked else f"{14 + (severity * 0.5):.0f} Days",
+            "Freight Rate": f"${base_freight_rate * (1.8 if is_red_sea_blocked else 1.0):.2f} / bbl",
+            "War Risk Ins.": f"{war_risk_premium:.2f}%",
+            "Executability": "92% (High Confidence)" if optimal_score != -1.0 else "FATAL (No Path)"
+        })
+        
+        # OPTION 2: Standard US Gulf Coast Hedge
+        routes.append({
+            "Action Type": "Spot Market Hedge",
+            "Corridor": "US Gulf Coast (USGC) to West Coast India",
+            "Vessel Class": "Aframax (750k bbls) - STS Transfer",
+            "Transit Time": "35 Days",
+            "Freight Rate": f"${base_freight_rate * 2.2:.2f} / bbl",
+            "War Risk Ins.": "0.05% (Safe Waters)",
+            "Executability": "75% (Subject to Vessel Availability)"
+        })
+
+    # OPTION 3: Strategic Mitigation (Domestic Fallback - Always Available)
     routes.append({
         "Action Type": "Strategic Mitigation",
         "Corridor": "SPR Drawdown / Domestic Pipeline Boost",
