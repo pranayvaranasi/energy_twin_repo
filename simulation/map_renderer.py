@@ -127,6 +127,10 @@ def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set
     if 3 not in disrupted_ids:
         route_edges.extend([(3, 21), (3, 22), (21, 4), (22, 4)])
         
+    # NEW: Always maintain Russian Far East to East Coast if Malacca (10) is not blocked
+    if 10 not in disrupted_ids:
+        route_edges.extend([(16, 10), (10, 17), (10, 25), (10, 30), (30, 7), (25, 26)])
+        
     return list(set(route_edges))
 
 def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[str, Any]], inventory_result: Dict[str, Any] = None, live_vessels: Dict[str, Any] = None) -> go.Figure:
