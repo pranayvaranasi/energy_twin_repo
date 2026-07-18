@@ -43,6 +43,12 @@ PIPELINE_WAYPOINTS = {
     (7, 29):  [[17.00, 81.80]], # Visakhapatnam to Kondapalli
     (26, 27): [[22.06, 88.06], [25.43, 86.13], [26.44, 80.33], [27.17, 78.00]], # Paradip to Delhi via Haldia/Barauni (PHBPL)
     (14, 19): [[31.08, 29.82]], # Sumed Pipeline to Med Coast (Sidi Kerir)
+    
+    # NEW: INSTC (Russia to Chabahar via Caspian Sea / Tehran)
+    (8, 18): [[46.34, 48.03], [35.68, 51.38]],
+    
+    # NEW: IMEC Rail (Piraeus to UAE/Middle East via Haifa and Riyadh)
+    (19, 3): [[32.81, 34.99], [24.71, 46.67]]
 }
 
 def _get_pipeline_route(src_id: int, tgt_id: int, src: dict, tgt: dict):
@@ -112,6 +118,11 @@ def _resolve_route_edges(active_routes: List[Dict[str, Any]], disrupted_ids: set
         elif "instc" in corridor or "chabahar" in corridor:
             route_edges.extend([(8, 18), (18, 21), (21, 4)])
             
+        # NEW Alternative: IMEC (India-Middle East-Europe Economic Corridor)
+        elif "imec" in corridor:
+            # Urals(8) -> Piraeus(19) -> Middle East Rail(3) -> Mundra(21) -> Jamnagar(4)
+            route_edges.extend([(8, 19), (19, 3), (3, 21), (21, 4)])
+            
         # Alternative: Sumed Pipeline
         elif "sumed" in corridor:
             route_edges.extend([(3, 6), (6, 14), (14, 19)])
@@ -165,7 +176,7 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
         tgt = node_dict.get(edge["target"])
         if not src or not tgt: continue
         
-        is_pipeline = edge.get("type") in ["pipeline", "terrestrial_pipeline"]
+        is_pipeline = edge.get("type") in ["pipeline", "terrestrial_pipeline", "terrestrial_rail"]
         line_color = "rgba(168, 85, 247, 0.4)" if is_pipeline else "rgba(100, 116, 139, 0.25)"
         line_width = 2 if is_pipeline else 1
         line_dash = "solid" if is_pipeline else "dot"
@@ -200,7 +211,7 @@ def generate_live_ais_map(impact_data: Dict[str, Any], active_routes: List[Dict[
             # Make the pipeline check bidirectional to prevent searoute misfires
             is_pipeline = any(
                 (e["source"] == src_id and e["target"] == tgt_id or e["source"] == tgt_id and e["target"] == src_id) 
-                and "pipeline" in e.get("type", "") 
+                and ("pipeline" in e.get("type", "") or "rail" in e.get("type", "")) 
                 for e in graph_data.get("edges", [])
             )
             

@@ -421,6 +421,16 @@
       "source": 24,
       "target": 27,
       "type": "terrestrial_pipeline"
+    },
+    {
+      "source": 8,
+      "target": 19,
+      "type": "sea_lane"
+    },
+    {
+      "source": 19,
+      "target": 3,
+      "type": "terrestrial_rail"
     }
   ]
 }
